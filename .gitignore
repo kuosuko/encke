@@ -1,8 +1,20 @@
 node_modules
+
+# catches both the package's dist/ and playground/dist/
 dist
+
 .DS_Store
 *.tgz
 .env
+.env.*
+*.log
+npm-debug.log*
+coverage
 
-# data/*.data 的機械產物（gzip + base64），npm install 的 prepare 會重建
+# local editor and agent settings — not part of this repo
+.claude
+.vscode
+.idea
+
+# mechanical product of data/*.data (gzip + base64); prepare rebuilds it on install
 src/trie-data.generated.ts

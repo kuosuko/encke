@@ -1,0 +1,55 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      # npm ci is not optional: src/trie-data.generated.ts is gitignored and
+      # only exists once prepare has run. Without it even typecheck fails.
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  # Unit tests cannot see packaging problems — they run against the source tree
+  # through a vitest alias. The exports map, the bin, dist's relative path to
+  # data/, and the import("encke/tables") self-reference only resolve once the
+  # package is genuinely installed into node_modules.
+  pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          # scripts/smoke-install.mjs uses import.meta.dirname, which needs 20.11+
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:pack
+
+  # playground is not in tsconfig's include, so npm run typecheck does not cover
+  # it. Without this job a broken playground first surfaces during deploy.
+  playground:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit -p playground/tsconfig.json
+      - run: npm run playground:build

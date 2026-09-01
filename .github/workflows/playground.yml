@@ -1,0 +1,63 @@
+# The playground is purely static — build it and hand the output to GitHub Pages.
+name: playground
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "playground/**"
+      - "src/**"
+      - "data/**"
+      - "package.json"
+      - ".github/workflows/playground.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one deploy at a time; a queued older run gives way to the newer one.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Defaults to the project site (kuosuko.github.io/encke/) because there is
+      # no CNAME in the repo. Once a custom domain is set up, change both to:
+      #   PLAYGROUND_BASE: /
+      #   PLAYGROUND_SITE: https://your-domain
+      # Both matter — a wrong base 404s every asset, a wrong site means social
+      # cards cannot fetch the image.
+      - run: npm run playground:build
+        env:
+          PLAYGROUND_BASE: /encke/
+          PLAYGROUND_SITE: https://kuosuko.github.io/encke
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: playground/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
