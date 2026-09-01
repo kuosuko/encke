@@ -20,7 +20,7 @@ export default defineConfig({
   splitting: true,
   sourcemap: true,
   treeshake: true,
-  // Self-reference: keeps dynamic import("encke/tables") in the output verbatim
-  // so the exports map resolves it at runtime
-  external: ["encke"],
+  // Self-reference: keeps dynamic import("@sz.ws/encke/tables") in the output
+  // verbatim so the exports map resolves it at runtime
+  external: ["@sz.ws/encke"],
 });

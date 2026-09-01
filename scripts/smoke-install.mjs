@@ -4,7 +4,7 @@
  *
  * The unit tests run against the source tree, so they structurally cannot
  * catch packaging problems: the exports map, bin, dist/'s path relative to
- * data/, and the self-referencing import("encke/tables") all only resolve
+ * data/, and the self-referencing import("@sz.ws/encke/tables") all only resolve
  * once the package is actually sitting in node_modules.
  *
  *   npm run test:pack
@@ -53,7 +53,7 @@ try {
 
   check("ESM entry (node condition)", () =>
     script("a.mjs", `
-      import { generateAppClipCode, estimatePayloadBits, checkColors } from "encke";
+      import { generateAppClipCode, estimatePayloadBits, checkColors } from "@sz.ws/encke";
       const r = generateAppClipCode({ url: "https://oru.okuso.uk/su", templateIndex: 11 });
       if (r.rawBits.length !== 65) throw new Error("bits " + r.rawBits.length);
       if (r.colors.tint !== "88DDCC") throw new Error("tint " + r.colors.tint);
@@ -64,7 +64,7 @@ try {
 
   check("CJS entry (require)", () =>
     script("b.cjs", `
-      const { generateAppClipCode } = require("encke");
+      const { generateAppClipCode } = require("@sz.ws/encke");
       console.log(generateAppClipCode({ url: "https://a.co/p" }).arcCount + " arcs");
     `).replace(/^/, ""));
 
@@ -72,7 +72,7 @@ try {
     script("c.mjs", `
       import React from "react";
       import { renderToStaticMarkup } from "react-dom/server";
-      import { AppClipCode, AppClipCodeImg } from "encke/react";
+      import { AppClipCode, AppClipCodeImg } from "@sz.ws/encke/react";
       const html = renderToStaticMarkup(React.createElement(AppClipCode, { url: "https://oru.okuso.uk/su", templateIndex: 11, width: 220 }));
       if (!html.includes("<svg")) throw new Error("no svg — the react subpath never registered the Node tables");
       if (!html.includes("#88DDCC")) throw new Error("no tint");
@@ -84,7 +84,7 @@ try {
 
   check("./handler — HTTP endpoint", () =>
     script("f.mjs", `
-      import { createHandler } from "encke/handler";
+      import { createHandler } from "@sz.ws/encke/handler";
       const handler = createHandler({ allowedHosts: ["oru.okuso.uk"] });
 
       const ok = await handler(new Request("https://x/?url=https%3A%2F%2Foru.okuso.uk%2Fsu&index=11&size=256"));
@@ -102,7 +102,7 @@ try {
 
   check("./tables subpath", () =>
     script("d.mjs", `
-      import { decodeEmbeddedTables } from "encke/tables";
+      import { decodeEmbeddedTables } from "@sz.ws/encke/tables";
       const t = await decodeEmbeddedTables();
       if (t.h.length !== 121758) throw new Error("h " + t.h.length);
       console.log("h/spq/cpq " + [t.h, t.spq, t.cpq].map(x => x.length).join("/"));
@@ -110,7 +110,7 @@ try {
 
   check("browser path — self-referencing dynamic import", () =>
     script("e.mjs", `
-      import { compressBits, resetTrieTables, loadTables, hasTrieTables } from "encke";
+      import { compressBits, resetTrieTables, loadTables, hasTrieTables } from "@sz.ws/encke";
       const fromDisk = compressBits("https://example.com/search?p=shoes");
       resetTrieTables();
       if (hasTrieTables()) throw new Error("reset did nothing");

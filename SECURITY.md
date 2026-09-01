@@ -11,7 +11,7 @@ week; if the report is valid, a fix and a note in the release.
 
 The parts of this package that handle input someone else controls:
 
-- **`encke/handler`** — the HTTP endpoint. Anything that gets markup, a script,
+- **`@sz.ws/encke/handler`** — the HTTP endpoint. Anything that gets markup, a script,
   or an external reference into a served SVG; anything that makes the endpoint
   serve a response for a host outside a configured `allowedHosts`; resource
   exhaustion from a single request.

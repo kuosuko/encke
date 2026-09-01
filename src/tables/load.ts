@@ -53,7 +53,7 @@ export function loadTables(opts: LoadTablesOptions = {}): Promise<void> {
       if (typeof f !== "function") throw new Error("encke: no fetch available; pass options.fetch");
       return setTrieTables(await fetchTables(opts.baseUrl, f));
     }
-    const { decodeEmbeddedTables } = await import("encke/tables");
+    const { decodeEmbeddedTables } = await import("@sz.ws/encke/tables");
     setTrieTables(await decodeEmbeddedTables());
   };
 

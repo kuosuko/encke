@@ -3,15 +3,15 @@
  *
  * It takes a standard Web Request and returns a standard Web Response, so
  * the same code runs unchanged on Cloudflare Workers, a Next.js route
- * handler, Deno and Bun. On Node, use `encke serve` or wire it to node:http
+ * handler, Deno and Bun. On Node, use the `encke serve` CLI or wire it to node:http
  * yourself.
  *
  * @example Cloudflare Workers
- * import { createHandler } from "encke/handler";
+ * import { createHandler } from "@sz.ws/encke/handler";
  * export default { fetch: createHandler() };
  *
  * @example Next.js app/code/route.ts
- * import { createHandler } from "encke/handler";
+ * import { createHandler } from "@sz.ws/encke/handler";
  * export const GET = createHandler({ allowedHosts: ["example.com"] });
  *
  * URLs look like this:

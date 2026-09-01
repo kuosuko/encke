@@ -7,7 +7,7 @@
  * `generateAppClipCodeAsync()` instead.
  *
  * @example
- * import { generateAppClipCode } from "encke";
+ * import { generateAppClipCode } from "@sz.ws/encke";
  * const { svg } = generateAppClipCode({ url: "https://oru.okuso.uk/su" });
  *
  * @example Custom center

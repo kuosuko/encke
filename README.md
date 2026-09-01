@@ -9,13 +9,13 @@ No macOS. No native binaries. Bit-for-bit identical to Apple's own generator.
 
 <sub>Named after the comet with the shortest known orbit — it comes back every 3.3 years.</sub>
 
-[![npm](https://img.shields.io/npm/v/encke)](https://www.npmjs.com/package/encke)
+[![npm](https://img.shields.io/npm/v/%40sz.ws%2Fencke)](https://www.npmjs.com/package/@sz.ws/encke)
 [![license](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 [![types](https://img.shields.io/badge/types-included-30a46c)](./src/index.ts)
 [![node](https://img.shields.io/badge/node-%E2%89%A518-334155)](./package.json)
 
 ```bash
-npm install encke
+npm install @sz.ws/encke
 ```
 
 **[Try it → encke.sz.ws](https://encke.sz.ws)**
@@ -31,7 +31,7 @@ This package reimplements the whole format from scratch: URL compression, Reed-S
 ## Quick start
 
 ```ts
-import { generateAppClipCode } from "encke";
+import { generateAppClipCode } from "@sz.ws/encke";
 
 const { svg } = generateAppClipCode({ url: "https://oru.okuso.uk/su" });
 ```
@@ -41,7 +41,7 @@ const { svg } = generateAppClipCode({ url: "https://oru.okuso.uk/su" });
 ### React / Next.js
 
 ```tsx
-import { AppClipCode, AppClipCodeImg } from "encke/react";
+import { AppClipCode, AppClipCodeImg } from "@sz.ws/encke/react";
 
 <AppClipCode url="https://oru.okuso.uk/su" width={220} />
 <AppClipCodeImg url="https://oru.okuso.uk/su" width={220} alt="Scan me" />
@@ -55,7 +55,7 @@ import { AppClipCode, AppClipCodeImg } from "encke/react";
 | Client Component, URL known at build time | Nothing, if you generate on the server and pass the SVG down. |
 | Client Component, URL typed by the user | The tables — but as a lazily-fetched chunk, never in your main bundle. |
 
-`encke/react` itself is 31 KB. Nothing statically imports the tables.
+`@sz.ws/encke/react` itself is 31 KB. Nothing statically imports the tables.
 
 For that last row, the component loads them on its own and re-renders — no `useEffect` on your side:
 
@@ -104,7 +104,7 @@ Every call returns `{ svg, rawBits, payloadHex, arcCount, colors }` — the debu
 The 128-bit budget is the one real constraint. Ask before you generate:
 
 ```ts
-import { estimatePayloadBits } from "encke";
+import { estimatePayloadBits } from "@sz.ws/encke";
 
 estimatePayloadBits("https://oru.okuso.uk/su");
 // { bits: 65, limit: 128, headroom: 63, willFit: true }
@@ -118,7 +118,7 @@ It never throws — an unencodable URL comes back as `{ bits: null, reason }`.
 ### Will these colors scan?
 
 ```ts
-import { checkColors, suggestColors } from "encke";
+import { checkColors, suggestColors } from "@sz.ws/encke";
 
 checkColors("777777", "888888");
 // { ok: false, contrast: 1.15, lumaDelta: 17, reason: "brightness difference 17 (needs ≥ 100), contrast 1.15:1 (needs ≥ 2.8:1)" }
@@ -135,23 +135,23 @@ Node — including Next.js server components and route handlers — needs no set
 Anywhere without a filesystem, load them once:
 
 ```ts
-import { loadTables, generateAppClipCode } from "encke";
+import { loadTables, generateAppClipCode } from "@sz.ws/encke";
 
 await loadTables();                                  // ~1.5 MB, a separate lazy chunk
 await loadTables({ baseUrl: "/appclip-tables" });    // or serve data/*.data yourself — zero bundle cost
 generateAppClipCode({ url });                        // synchronous from here on
 ```
 
-`generateAppClipCodeAsync()` does both in one call. The tables are never part of your main bundle: importing `encke` costs about 31 KB.
+`generateAppClipCodeAsync()` does both in one call. The tables are never part of your main bundle: importing `@sz.ws/encke` costs about 31 KB.
 
 ## HTTP endpoint
 
-`encke/handler` turns a query string into an SVG. It takes a standard `Request` and returns a
+`@sz.ws/encke/handler` turns a query string into an SVG. It takes a standard `Request` and returns a
 standard `Response`, so the same function deploys to Cloudflare Workers, a Next.js route handler,
 Deno, or Bun:
 
 ```ts
-import { createHandler } from "encke/handler";
+import { createHandler } from "@sz.ws/encke/handler";
 
 export default { fetch: createHandler() };                        // Cloudflare Workers
 export const GET = createHandler({ allowedHosts: ["example.com"] }); // Next.js app/code/route.ts
@@ -160,7 +160,7 @@ export const GET = createHandler({ allowedHosts: ["example.com"] }); // Next.js 
 To try it locally:
 
 ```bash
-npx encke serve --port 8787
+npx @sz.ws/encke serve --port 8787
 ```
 
 ```
@@ -208,11 +208,11 @@ receive the empty HTML shell rather than an image. Use `<iframe>` to embed one, 
 ## CLI
 
 ```bash
-npx encke --url https://oru.okuso.uk/su --index 11 --output code.svg
-npx encke serve --port 8787 --hosts example.com
-npx encke estimate --url https://oru.okuso.uk/menu
-npx encke check --foreground 777777 --background 888888
-npx encke templates
+npx @sz.ws/encke --url https://oru.okuso.uk/su --index 11 --output code.svg
+npx @sz.ws/encke serve --port 8787 --hosts example.com
+npx @sz.ws/encke estimate --url https://oru.okuso.uk/menu
+npx @sz.ws/encke check --foreground 777777 --background 888888
+npx @sz.ws/encke templates
 ```
 
 Flags mirror Apple's own tool (`-u -o -i -f -b`), so existing scripts port over. Without `--output` the SVG goes to stdout.

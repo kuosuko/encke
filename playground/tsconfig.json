@@ -8,7 +8,7 @@
     "types": ["vite/client"],
     "baseUrl": "..",
     "paths": {
-      "encke/tables": ["./src/tables/embedded.ts"]
+      "@sz.ws/encke/tables": ["./src/tables/embedded.ts"]
     }
   },
   "include": [".", "../src"]

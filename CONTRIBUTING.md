@@ -27,7 +27,7 @@ npm run typecheck && npm test && npm run test:pack
 `test:pack` is the one that catches what the others cannot. The unit tests run
 against the source tree through a vitest alias, so they never exercise the
 `exports` map, the `bin` entry, `dist/`'s relative path to `data/`, or the
-self-referencing `import("encke/tables")`. `test:pack` builds a tarball,
+self-referencing `import("@sz.ws/encke/tables")`. `test:pack` builds a tarball,
 installs it into a scratch project, and imports through every entry point. It
 takes about a minute and it has caught real bugs that shipped-looking code hid.
 

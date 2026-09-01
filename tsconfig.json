@@ -17,7 +17,7 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "paths": {
-      "encke/tables": [
+      "@sz.ws/encke/tables": [
         "./src/tables/embedded.ts"
       ]
     },

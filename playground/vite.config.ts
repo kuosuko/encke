@@ -72,7 +72,7 @@ export default defineConfig({
   publicDir: fileURLToPath(new URL("./public", import.meta.url)),
   resolve: {
     alias: {
-      "encke/tables": fileURLToPath(new URL("../src/tables/embedded.ts", import.meta.url)),
+      "@sz.ws/encke/tables": fileURLToPath(new URL("../src/tables/embedded.ts", import.meta.url)),
     },
   },
   // Two pages: index is the editor, render is the image API (parameters in, a

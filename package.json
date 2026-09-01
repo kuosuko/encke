@@ -1,5 +1,5 @@
 {
-  "name": "encke",
+  "name": "@sz.ws/encke",
   "version": "0.2.0",
   "description": "Apple App Clip Code generator in pure TypeScript. Renders the scannable ring code to SVG, bit-for-bit identical to Apple's AppClipCodeGenerator, with no macOS and no native binary. Works in Node, Next.js, React, browsers and Cloudflare Workers.",
   "keywords": [
