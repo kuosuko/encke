@@ -18,6 +18,8 @@ No macOS. No native binaries. Bit-for-bit identical to Apple's own generator.
 npm install encke
 ```
 
+**[Try it → encke.sz.ws](https://encke.sz.ws)**
+
 </div>
 
 ---

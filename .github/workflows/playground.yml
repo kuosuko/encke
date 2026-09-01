@@ -35,16 +35,15 @@ jobs:
 
       - run: npm ci
 
-      # Defaults to the project site (kuosuko.github.io/encke/) because there is
-      # no CNAME in the repo. Once a custom domain is set up, change both to:
-      #   PLAYGROUND_BASE: /
-      #   PLAYGROUND_SITE: https://your-domain
-      # Both matter — a wrong base 404s every asset, a wrong site means social
-      # cards cannot fetch the image.
+      # Served from the custom domain in playground/public/CNAME, so the site
+      # sits at the root. Both of these matter: a wrong base 404s every asset,
+      # and a wrong site means social cards cannot fetch the image.
+      # Reverting to kuosuko.github.io/encke/ means /encke/ and .../encke here,
+      # and deleting the CNAME file.
       - run: npm run playground:build
         env:
-          PLAYGROUND_BASE: /encke/
-          PLAYGROUND_SITE: https://kuosuko.github.io/encke
+          PLAYGROUND_BASE: /
+          PLAYGROUND_SITE: https://encke.sz.ws
 
       - uses: actions/configure-pages@v5
 
