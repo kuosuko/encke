@@ -1,6 +1,8 @@
 /**
- * Node 端的表載入：開機註冊一個同步取得器，第一次編碼時才真的讀檔。
- * 所以 Node / Next.js server 完全不用 await loadTables()，也不會把 1.5 MB 內嵌表拉進來。
+ * Table loading on Node: register a sync provider at startup, and only
+ * actually touch the disk on the first encode. That is why Node and the
+ * Next.js server never need `await loadTables()` and never pull in the
+ * 1.5 MB embedded tables.
  */
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -9,7 +11,7 @@ import { setSyncTableProvider, type TrieTables } from "./registry";
 
 let overrideDir: string | null = null;
 
-/** 自訂 data/ 位置（例如把資料檔搬到別的地方部署時）。 */
+/** Point at a different data/ directory (e.g. when deploying the data files elsewhere). */
 export function setDataDir(dir: string): void {
   overrideDir = dir;
 }
@@ -19,10 +21,11 @@ function dataDir(): string {
   const fromEnv = globalThis.process?.env?.APPCLIP_DATA_DIR;
   if (fromEnv) return fromEnv;
 
-  // 不要用 __dirname 判斷 —— `node -e` 會把 __dirname="." 洩到 globalThis，
-  // 在 ESM 下反而拿到錯的目錄。tsup 已經幫 CJS 補好 import.meta.url。
+  // Do not probe __dirname — `node -e` leaks __dirname="." onto globalThis,
+  // which under ESM resolves to the wrong directory. tsup already shims
+  // import.meta.url for the CJS build.
   const here = dirname(fileURLToPath(import.meta.url));
-  // 打包後是 dist/node.js → ../data；直接跑原始碼是 src/tables/node.ts → ../../data
+  // Bundled: dist/node.js -> ../data. Running from source: src/tables/node.ts -> ../../data
   const candidates = [join(here, "..", "data"), join(here, "..", "..", "data")];
   return candidates.find(dir => existsSync(join(dir, "h.data"))) ?? candidates[0];
 }

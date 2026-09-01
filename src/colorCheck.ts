@@ -1,13 +1,16 @@
 /**
- * 配色可掃描性檢查。
+ * Is this color pair scannable?
  *
- * 原生 AppClipCodeGenerator 會直接拒絕對比不足的配色（"Color combination not
- * supported"）—— 不是龜毛，是那種碼相機真的讀不出來。這裡把那條界線重建出來。
+ * The native AppClipCodeGenerator flatly rejects low-contrast pairs
+ * ("Color combination not supported") — not fussiness: cameras genuinely
+ * cannot read those codes. This reconstructs where that line sits.
  *
- * 規則是從原生工具 624 組取樣（灰階全格 + 隨機彩色）擬合的：
- *   |Δluma(Rec.601)| ≥ 100  且  WCAG 對比 ≥ 2.8
- * 與原生判定一致率 97.1%（9 組我們放行而原生擋、9 組我們擋而原生放行），
- * 且 18 組內建配色全部通過。取樣資料在 test/fixtures/color-validity.txt。
+ * The rule was fitted against 624 samples from the native tool (the full
+ * greyscale grid plus random colors):
+ *   |Δluma(Rec.601)| ≥ 100  and  WCAG contrast ≥ 2.8
+ * That agrees with the native verdict 97.1% of the time (9 pairs we accept
+ * and it rejects, 9 pairs we reject and it accepts), and all 18 built-in
+ * schemes pass. The sample data is in test/fixtures/color-validity.txt.
  */
 import { normalizeHex, TEMPLATE_COLORS } from "./colors";
 
@@ -24,14 +27,14 @@ const toLinear = (v: number): number => {
   return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
 };
 
-/** WCAG 相對亮度。 */
+/** WCAG relative luminance. */
 const relativeLuminance = ([r, g, b]: [number, number, number]): number =>
   0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
 
-/** Rec.601 luma（0-255）。 */
+/** Rec.601 luma (0-255). */
 const luma601 = ([r, g, b]: [number, number, number]): number => 0.299 * r + 0.587 * g + 0.114 * b;
 
-/** 兩色的 WCAG 對比（1-21）。 */
+/** WCAG contrast ratio between two colors (1-21). */
 export function contrastRatio(a: string, b: string): number {
   const l1 = relativeLuminance(rgb(a));
   const l2 = relativeLuminance(rgb(b));
@@ -43,12 +46,12 @@ export interface ColorCheck {
   ok: boolean;
   contrast: number;
   lumaDelta: number;
-  /** ok 為 false 時，說明是哪一項不夠。 */
+  /** When ok is false, which check fell short. */
   reason?: string;
 }
 
 /**
- * 這組配色印出來掃得到嗎？
+ * Will this pair scan once it is printed?
  *
  * ```ts
  * checkColors("777777", "888888");
@@ -79,7 +82,7 @@ export function assertColorsScannable(foreground: string, background: string): v
   );
 }
 
-/** 在內建配色裡找出與這組最接近、且通過檢查的替代方案。 */
+/** Nearest built-in schemes to this pair that do pass the check. */
 export function suggestColors(foreground: string, background: string): { fg: string; bg: string; third: string }[] {
   const target = rgb(background);
   const distance = (hex: string) => {

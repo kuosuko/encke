@@ -1,6 +1,8 @@
 /**
- * React wrapper。伺服器端（表已就緒）用 renderToStaticMarkup 直接驗；
- * 瀏覽器端（表未載）驗它不會炸、會顯示 fallback，並自己把表載起來重繪。
+ * The React wrapper. On the server (tables ready) renderToStaticMarkup
+ * checks the output directly; in the browser (tables not loaded) the checks
+ * are that it does not throw, that it shows the fallback, and that it loads
+ * the tables itself and re-renders.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import * as React from "react";

@@ -4,8 +4,9 @@ import { fileURLToPath } from "node:url";
 export default defineConfig({
   resolve: {
     alias: {
-      // loadTables() 以套件自身的 subpath 動態載入內嵌表，好讓 bundler 切成獨立 chunk。
-      // 測試是直接跑原始碼，所以把它接回原檔。
+      // loadTables() dynamic-imports the embedded tables through the package's
+      // own subpath, so bundlers split them into a separate chunk. Tests run
+      // against the source tree, so point that back at the real file.
       "encke/tables": fileURLToPath(new URL("./src/tables/embedded.ts", import.meta.url)),
     },
   },

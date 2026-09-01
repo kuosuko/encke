@@ -1,12 +1,14 @@
 /**
  * React / Next.js wrapper
  *
- * Server Component、route handler、build 期產生 —— 直接用，瀏覽器一個位元組的
- * Huffman 表都不用載，client 只收到 SVG 字串。
+ * Server Components, route handlers, build-time generation — just use it.
+ * The browser downloads not one byte of the Huffman tables; the client
+ * receives finished SVG markup.
  *
- * Client Component（使用者即時輸入網址才生成）—— 元件會自己去載表並重繪。
- * 表不在主 bundle 裡，是獨立的 lazy chunk；想連那個 chunk 都不要，就把
- * data/*.data 放進自己的靜態目錄，傳 tables={{ baseUrl: "/…" }}。
+ * Client Components (generating from a URL the user types) — the component
+ * loads the tables itself and re-renders. They are never in the main bundle,
+ * only a separate lazy chunk. To avoid even that chunk, serve data/*.data
+ * from your own static directory and pass tables={{ baseUrl: "/…" }}.
  */
 import * as React from "react";
 import { generateAppClipCode, generateDataURL, type GenerateOptions } from "./generator";
@@ -18,23 +20,31 @@ export type AppClipCodeProps = GenerateOptions & {
   style?: React.CSSProperties;
   width?: number | string;
   height?: number | string;
-  /** 表還在載、或這個網址編不出來時顯示的東西。預設不顯示任何東西。 */
+  /**
+   * Shown while the tables load, or when this URL cannot be encoded.
+   * Renders nothing by default.
+   */
   fallback?: React.ReactNode;
   /**
-   * 瀏覽器端要怎麼取得 Huffman 表。
-   * 預設自動載內嵌的那份；`{ baseUrl }` 改成抓自己 host 的 data/*.data；
-   * `false` 表示不自動載（你自己會先 await loadTables()）。
+   * How the browser should get the Huffman tables.
+   * By default it loads the embedded copy; `{ baseUrl }` fetches data/*.data
+   * that you host yourself; `false` disables auto-loading (you will have
+   * awaited loadTables() on your own).
    */
   tables?: LoadTablesOptions | false;
-  /** 生成失敗時呼叫（網址太長、配色掃不出來、表載不到…）。 */
+  /**
+   * Called when generation fails: URL too long, colors that will not scan,
+   * tables that would not load.
+   */
   onError?: (error: Error) => void;
 };
 
 type Outcome<T> = { value: T; error?: undefined } | { value?: undefined; error: Error };
 
 /**
- * 同步產生；表還沒到位就先載再重繪。
- * Server 端 generate 一次就成功，effect 根本不會跑。
+ * Generate synchronously; if the tables are not there yet, load them and
+ * re-render. On the server the first generate succeeds and the effects never
+ * run at all.
  */
 function useAppClipCode<T>(
   produce: () => T,
@@ -49,11 +59,12 @@ function useAppClipCode<T>(
     } catch (e) {
       return { error: e as Error };
     }
-    // attempt 是刻意的相依：表載好之後要重算一次
+    // attempt is a deliberate dependency: recompute once the tables land
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps, attempt]);
 
-  // options 物件通常是行內字面值，放進相依會每次重跑；用 ref 讀最新值就好
+  // The options objects are usually inline literals, so putting them in the
+  // dependency list would re-run on every render; read the latest via a ref
   const tablesRef = React.useRef(tables);
   tablesRef.current = tables;
   const onErrorRef = React.useRef(onError);
@@ -96,7 +107,7 @@ const optionDeps = (o: GenerateOptions) => [
   o.centerScale, o.lockupSvg, o.layout, o.allowUnscannableColors,
 ];
 
-/** 內聯 SVG。想要 <img> 就用 AppClipCodeImg。 */
+/** Inline SVG. Use AppClipCodeImg if you want an <img>. */
 export function AppClipCode(props: AppClipCodeProps) {
   const { className, style, width = 300, height = "auto", fallback = null, tables, onError } = props;
   const options = generateOptions(props);
@@ -116,7 +127,7 @@ export function AppClipCode(props: AppClipCodeProps) {
   );
 }
 
-/** 同樣的東西，但輸出成 <img src="data:image/svg+xml…">。 */
+/** The same thing, emitted as <img src="data:image/svg+xml…">. */
 export function AppClipCodeImg(
   props: AppClipCodeProps & { alt?: string } & Omit<React.ImgHTMLAttributes<HTMLImageElement>, keyof AppClipCodeProps | "alt" | "src">
 ) {

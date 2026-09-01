@@ -1,6 +1,7 @@
 /**
- * 表的載入路徑。這裡刻意從 ../src/index（通用進入點）import，
- * 不是 ../src/node —— 模擬瀏覽器 / Workers：表要自己載。
+ * The table-loading paths. These deliberately import from ../src/index (the
+ * universal entry point) rather than ../src/node, to reproduce the browser /
+ * Workers situation where the tables must be loaded by hand.
  */
 import { describe, it, expect, beforeEach } from "vitest";
 import {

@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { compressBits, compressBitsUnchecked, compressURL, PAYLOAD_LIMIT_BITS } from "../src/node";
+import {
+  compressBits,
+  compressBitsUnchecked,
+  compressURL,
+  percentEncodeUnsupported,
+  PAYLOAD_LIMIT_BITS,
+} from "../src/node";
 import { KNOWN_WORDS, FIXED_TLDS } from "../src/tables.generated";
 
 describe("compressBits", () => {
@@ -15,7 +21,8 @@ describe("compressBits", () => {
   });
 
   it("keeps the query when the URL also has a path", () => {
-    // 曾經的 bug：parseURL 只在沒有 path 時才取 query，導致 query 被整段吞掉
+    // Past bug: parseURL only picked up the query when there was no path,
+    // so the entire query got swallowed
     const withQuery = compressBits("https://example.com/search?p=shoes");
     const withoutQuery = compressBits("https://example.com/search");
     expect(withQuery).not.toBe(withoutQuery);
@@ -23,9 +30,9 @@ describe("compressBits", () => {
   });
 
   it("sets the template-type flag when the template encoding wins", () => {
-    // /menu 是詞庫裡的詞，走 template 編碼 → bit 1 必須是 1
+    // /menu is a wordbook word, so it takes the template encoding -> bit 1 must be 1
     expect(compressBits("https://example.com/menu")[1]).toBe("1");
-    // 多段 path 走不了 template
+    // a multi-segment path cannot use the template encoding
     expect(compressBits("https://example.com/a/b/c")[1]).toBe("0");
   });
 
@@ -35,7 +42,8 @@ describe("compressBits", () => {
   });
 
   it("uses the 8-bit TLD table for TLDs outside the Huffman set", () => {
-    // .io 在 113 個固定表裡但不在 20 個 Huffman TLD 裡 → host format 1 ("10")
+    // .io is in the 113-entry fixed table but not among the 20 Huffman TLDs,
+    // so it takes host format 1 ("10")
     expect(compressBits("https://ex.io/x").slice(3, 5)).toBe("10");
   });
 
@@ -54,6 +62,44 @@ describe("compressBits", () => {
     const bytes = compressURL("https://a.co/p");
     expect(bytes).toHaveLength(16);
     expect(bytes[0]).toBe(0);
+  });
+});
+
+describe("characters outside Apple's alphabet", () => {
+  it("treats @ and %40 as the same URL", () => {
+    // Apple's tool rejects "@" outright but accepts "%40", and the two name
+    // the same resource
+    expect(compressBits("https://a.co/@suko")).toBe(compressBits("https://a.co/%40suko"));
+  });
+
+  it("encodes the other rejected punctuation too", () => {
+    for (const url of ["https://a.co/a~b", "https://a.co/a!b", "https://a.co/a(b)", "https://a.co/a$b"])
+      expect(compressBits(url).length, url).toBeGreaterThan(0);
+  });
+
+  it("does not double-encode an already-encoded URL", () => {
+    expect(percentEncodeUnsupported("/%40suko")).toBe("/%40suko");
+    expect(percentEncodeUnsupported("/@suko")).toBe("/%40suko");
+  });
+
+  it("leaves every character Apple accepts untouched", () => {
+    // The guardrail for bit-for-bit parity: not one character inside the
+    // alphabet may be altered
+    const alphabet = "#%&+,-./0123456789:;=?ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
+    expect(percentEncodeUnsupported(alphabet)).toBe(alphabet);
+  });
+
+  it("handles non-ASCII by encoding its UTF-8 bytes", () => {
+    expect(percentEncodeUnsupported("/日")).toBe("/%E6%97%A5");
+    expect(compressBits("https://a.co/%E6%97%A5")).toBe(compressBits("https://a.co/日"));
+  });
+
+  it("rejects userinfo rather than mangling it", () => {
+    expect(() => compressBits("https://user@a.co/p")).toThrow(/userinfo/i);
+  });
+
+  it("names the offending character when a host cannot be encoded", () => {
+    expect(() => compressBits("https://a_b.co/p")).toThrow(/Host contains "_"/);
   });
 });
 

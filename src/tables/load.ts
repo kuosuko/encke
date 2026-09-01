@@ -1,20 +1,22 @@
 /**
- * 載入 Huffman 表。
+ * Loading the Huffman tables.
  *
- * Node 用不到這個檔 —— `encke` 在 Node 下解析到 dist/node.js，
- * 開機就註冊了同步的 fs 取得器。這裡是給瀏覽器 / Workers / Deno 用的。
+ * Node never reaches this file — under Node, `encke` resolves to
+ * dist/node.js, which registers a synchronous fs provider at startup. This
+ * is for browsers / Workers / Deno.
  */
 import { hasTrieTables, setTrieTables, type TrieTables } from "./registry";
 
 export interface LoadTablesOptions {
   /**
-   * 放著 h.data / spq.data / cpq.data 的位置（自己 host 的靜態資源或 CDN）。
-   * 給了這個就不會把 1.5 MB 的內嵌表拉進 bundle。
+   * Where h.data / spq.data / cpq.data are served from (your own static
+   * assets or a CDN). Pass this and the 1.5 MB embedded tables never enter
+   * the bundle.
    */
   baseUrl?: string;
-  /** 自訂抓取方式，預設用全域 fetch。 */
+  /** Custom fetch implementation; defaults to the global fetch. */
   fetch?: typeof globalThis.fetch;
-  /** 已經自己讀好的表。 */
+  /** Tables you have already loaded yourself. */
   tables?: TrieTables;
 }
 
@@ -32,11 +34,12 @@ async function fetchTables(baseUrl: string, f: typeof globalThis.fetch): Promise
 }
 
 /**
- * 確保 Huffman 表已就緒。重複呼叫沒有成本，同時呼叫多次也只會載入一次。
+ * Make sure the Huffman tables are ready. Calling it again is free, and
+ * concurrent calls still load only once.
  *
  * ```ts
- * await loadTables();                               // 內嵌表（獨立 chunk，約 1.5 MB）
- * await loadTables({ baseUrl: "/appclip-tables" }); // 從自己的靜態目錄抓（bundle 零成本）
+ * await loadTables();                               // embedded tables (own chunk, ~1.5 MB)
+ * await loadTables({ baseUrl: "/appclip-tables" }); // from your static dir (0 KB of JS)
  * ```
  */
 export function loadTables(opts: LoadTablesOptions = {}): Promise<void> {
@@ -54,8 +57,9 @@ export function loadTables(opts: LoadTablesOptions = {}): Promise<void> {
     setTrieTables(await decodeEmbeddedTables());
   };
 
-  // settle 後一定要清掉，否則 resetTrieTables() 之後再呼叫會拿到已 resolve 的舊 promise，
-  // 直接 return 而不重新載入。
+  // Must be cleared once it settles. Otherwise a call after resetTrieTables()
+  // gets handed the old, already-resolved promise and returns straight away
+  // without reloading anything.
   inflight = run().finally(() => { inflight = null; });
   return inflight;
 }

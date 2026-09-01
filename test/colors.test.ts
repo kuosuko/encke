@@ -52,12 +52,13 @@ describe("tintFor", () => {
   });
 
   it("tracks Apple's own choice on the sampled pairs", () => {
-    // 85 組原生取樣。自訂配色是近似 —— 這裡把準確度釘住，退步就會被抓到。
+    // 85 native samples. Custom pairs are an approximation — this pins the
+    // accuracy down so any regression gets caught.
     const samples = parseSamples("color-tints.txt");
     let exact = 0;
     for (const [fg, bg, expected] of samples) {
       const got = rgb(tintFor(fg, bg)), want = rgb(expected.toUpperCase());
-      // 一律落在 Apple 選擇的一個 4-bit 級距內
+      // always within a single 4-bit step of Apple's choice
       for (let i = 0; i < 3; i++) expect(Math.abs(got[i] - want[i]), `${fg}/${bg}`).toBeLessThanOrEqual(17);
       if (got.every((v, i) => v === want[i])) exact++;
     }

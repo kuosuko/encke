@@ -1,8 +1,9 @@
 /**
- * 用 Apple 原生 AppClipCodeGenerator 產生 oracle fixture。
+ * Build the oracle fixture using Apple's own AppClipCodeGenerator.
  *
- * 只能在裝了 /usr/local/bin/AppClipCodeGenerator 的 macOS 上跑。產物 commit 進 repo，
- * 所以 CI 和其他機器不需要那支工具也能跑測試。
+ * Runs only on macOS with /usr/local/bin/AppClipCodeGenerator installed. The
+ * output is committed to the repo, so CI and every other machine can run the
+ * tests without that tool.
  *
  *   node scripts/gen-oracle.mjs
  */
@@ -14,9 +15,10 @@ import { join } from "node:path";
 const TOOL = "AppClipCodeGenerator";
 
 /**
- * 涵蓋每一條壓縮路徑，外加所有曾經編錯的形狀：
- * template word、字典詞、LEB128 數字、query（含 path+query 同時存在）、
- * 三種 host format、subdomain、fragment、root path、繞過 0 度的弧。
+ * Covers every compression path, plus every shape that has ever encoded
+ * wrong: template words, wordbook words, LEB128 numbers, queries (including
+ * path and query together), all three host formats, subdomains, fragments,
+ * root paths, and arcs that wrap past 0 degrees.
  */
 const URLS = [
   "https://appclip.apple.com/id?p=com.example.app",
@@ -40,27 +42,28 @@ const URLS = [
   "https://example.com/search?p=shoes",
   "https://t.co/gift",
 
-  // host format 1（8-bit TLD 索引）
+  // host format 1 (8-bit TLD index)
   "https://ex.io/x", "https://ex.app/product/9", "https://a.ch/events", "https://m.clip.work/x",
-  // host format 2（整條 host Huffman）—— 與 format 0/1 長度相同時原生選 2
+  // host format 2 (whole host through Huffman) — on a length tie with
+  // format 0/1, native picks 2
   "https://go.us/hotels?p=904", "https://www.abc.ca/more", "https://m.abc.cn/today/payments",
   "https://www.shop.ch/content/21241",
-  // path + query 同時存在
+  // path and query together
   "https://a.co/x?a=1&b=2", "https://a.co/x?a=0&b=2", "https://a.co/x?a=30&b=payment",
   "https://a.co/x?a=1&b=2&c=3", "https://a.co/x?ab=cd&ef=gh", "https://a.co/x?a=&b=2",
   "https://m.go.cn/x?a=0&b=recipe", "https://m.clip.work/x?a=10&b=store-locator",
-  // root path、trailing slash、fragment
+  // root path, trailing slash, fragment
   "https://a.co/", "https://a.co/a/", "https://a.co/?a=1", "https://a.co/#x", "https://a.co/x#f",
-  // 詞庫裡容易錯位的三個詞
+  // three wordbook entries whose indices are easy to get off by one
   "https://a.co/data", "https://a.co/store-locator", "https://a.co/item_id/9",
-  // LEB128 邊界
+  // LEB128 boundaries
   "https://a.co/127", "https://a.co/128", "https://a.co/16383", "https://a.co/16384",
   "https://a.co/p/2097151",
   // subdomain
   "https://appclip.a.no/compare/88252", "https://appclip.clip.plus/id", "https://www.m.hu/rewards/tours/844",
 ];
 
-/** 顏色路徑：內建模板 + 幾組自訂配色。 */
+/** The color paths: the built-in templates plus a few custom pairs. */
 const COLOR_CASES = [
   ...Array.from({ length: 18 }, (_, index) => ({ index })),
   { foreground: "000000", background: "FFFFFF" },
@@ -78,9 +81,11 @@ function runNative(args) {
 }
 
 /**
- * 每個 ring 壓成一行 "color:end,end;color:end,end;…"。
- * 原生用 sweep=0 反向畫、我們用 sweep=1 正向畫 —— 同一段弧，所以端點排序後再比。
- * 這個函式必須與 test/helpers.ts 的 ringSignatures() 完全一致。
+ * Flatten each ring to one line: "color:end,end;color:end,end;…".
+ * Native draws backwards with sweep=0 and we draw forwards with sweep=1 —
+ * the same arc either way, so sort the endpoints before comparing.
+ * This function must stay exactly in step with ringSignatures() in
+ * test/helpers.ts.
  */
 function extractRings(svg) {
   const markers = svg.slice(svg.indexOf('<g id="Markers"'));

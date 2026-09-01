@@ -1,9 +1,11 @@
 /**
- * 內嵌的 trie 表（gzip + base64，約 1.5 MB）。
+ * The embedded trie tables (gzip + base64, ~1.5 MB).
  *
- * 這是瀏覽器端的最後手段。只會被 loadTables() 用 dynamic import 拉進來，
- * 所以 bundler 會把它切成獨立 chunk，不碰主 bundle。
- * 想完全避開它：改用 loadTables({ baseUrl }) 從自己的靜態資源抓 data/*.data。
+ * Last resort for the browser. Only ever reached through a dynamic import
+ * inside loadTables(), so bundlers split it into its own chunk and leave the
+ * main bundle alone.
+ * To skip it entirely: loadTables({ baseUrl }) and serve data/*.data from
+ * your own static assets.
  */
 import { H_GZ_B64, SPQ_GZ_B64, CPQ_GZ_B64 } from "../trie-data.generated";
 import type { TrieTables } from "./registry";
@@ -15,7 +17,7 @@ function b64ToBytes(b64: string): Uint8Array {
     for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
     return out;
   }
-  // Node without atob（理論上到不了，Node 18+ 有）
+  // Node without atob (unreachable in practice — Node 18+ has it)
   return new Uint8Array(Buffer.from(b64, "base64"));
 }
 

@@ -1,24 +1,27 @@
 /**
- * 顏色 — App Clip Code 其實用三個顏色，不是兩個。
+ * Colors — an App Clip Code actually uses three of them, not two.
  *
- * 每個環碼由「前景色」與一個較淡的「輔助色」交錯繪製，掃描器靠這兩色的
- * 分群來讀 data-color。輔助色不是灰色：teal 00A6A1 配的是 88DDCC。
- * 下表 18 組是直接從 Apple 原生 AppClipCodeGenerator 的輸出抽出來的（逐一驗證）。
+ * Every code is drawn by interleaving the foreground color with a lighter
+ * "tint" color, and the scanner reads data-color by clustering the two.
+ * The tint is not grey: teal 00A6A1 pairs with 88DDCC.
+ * The 18 triples below were extracted straight out of Apple's own
+ * AppClipCodeGenerator output and verified one by one.
  *
- * 輔助色一律落在 4-bit 調色盤上（每個 byte 都是重複的 nibble，如 88 / DD / CC），
- * 自訂配色時我們也套同一個調色盤 — 見 tintFor()。
+ * Every tint lands on a 4-bit palette (each byte is a repeated nibble, e.g.
+ * 88 / DD / CC), and we snap custom colors to the same palette — see
+ * tintFor().
  */
 
 export interface ColorTemplate {
-  /** 環碼主色 */
+  /** The code's main color. */
   fg: string;
-  /** 底色 */
+  /** The background. */
   bg: string;
-  /** 輔助色（data-color="1" 的弧） */
+  /** The tint — arcs with data-color="1". */
   third: string;
 }
 
-/** Apple 內建 18 組配色，索引與原生 `--index` 一致。 */
+/** Apple's 18 built-in schemes; the indices match the native `--index`. */
 export const TEMPLATE_COLORS: readonly ColorTemplate[] = [
   { fg: "FFFFFF", bg: "000000", third: "888888" },
   { fg: "000000", bg: "FFFFFF", third: "888888" },
@@ -40,7 +43,7 @@ export const TEMPLATE_COLORS: readonly ColorTemplate[] = [
   { fg: "CC73E1", bg: "FFFFFF", third: "EEBBEE" },
 ] as const;
 
-/** "#FfF000" → "FFF000"（大寫、無 #、擴展 3 碼縮寫）*/
+/** "#FfF000" -> "FFF000" (uppercase, no #, 3-digit shorthand expanded) */
 export function normalizeHex(input: string): string {
   const h = input.trim().replace(/^#/, "");
   const full = h.length === 3 ? [...h].map(c => c + c).join("") : h;
@@ -53,20 +56,23 @@ const channels = (hex: string): [number, number, number] => {
   return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16)) as [number, number, number];
 };
 
-/** 找出與這組 fg/bg 完全相符的內建模板（順序無關）。 */
+/** Find the built-in template matching this exact fg/bg pair. */
 export function findTemplate(fg: string, bg: string): ColorTemplate | undefined {
   const f = normalizeHex(fg), b = normalizeHex(bg);
   return TEMPLATE_COLORS.find(t => t.fg === f && t.bg === b);
 }
 
 /**
- * 決定輔助色。
+ * Pick the tint color.
  *
- * 內建配色直接查表（與原生逐字元相同）；自訂配色則把 fg / bg 量化到 Apple 的
- * 4-bit 調色盤後，往背景方向內插 0.555 再取整。
+ * Built-in schemes are a table lookup and come out character-for-character
+ * identical to the native tool. For custom colors, quantize fg and bg onto
+ * Apple's 4-bit palette, interpolate 0.555 of the way toward the background,
+ * and round.
  *
- * 這是近似值：在 85 組原生取樣中，85 組全部落在 Apple 選擇的一個 4-bit 級距內，
- * 其中 70 組（82%）完全相同。色相一律保留。
+ * This one is an approximation: across 85 native samples, all 85 land within
+ * a single 4-bit step of Apple's choice, and 70 of them (82%) match exactly.
+ * Hue is always preserved.
  */
 export function tintFor(fg: string, bg: string): string {
   const exact = findTemplate(fg, bg);
@@ -81,7 +87,7 @@ export function tintFor(fg: string, bg: string): string {
   }).join("").toUpperCase();
 }
 
-/** "FFFFFF" → "#ffffff"（給 <input type="color"> 之類的地方用） */
+/** "FFFFFF" -> "#ffffff" (for <input type="color"> and friends) */
 export function hexToCss(hex: string): string {
   return `#${normalizeHex(hex).toLowerCase()}`;
 }

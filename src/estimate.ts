@@ -1,17 +1,17 @@
 /**
- * URL 能不能塞進環碼？—— 在真的生成之前先問。
+ * Will this URL fit in a code? — ask before actually generating one.
  */
 import { compressBitsUnchecked, PAYLOAD_LIMIT_BITS } from "./compressor";
 
 export interface PayloadEstimate {
-  /** 壓縮後的位元數；URL 根本無法編碼時為 null。 */
+  /** Bits after compression; null when the URL cannot be encoded at all. */
   bits: number | null;
-  /** 上限，固定 128。 */
+  /** The limit, always 128. */
   limit: number;
-  /** 還剩多少位元（負數代表超出）。無法編碼時為 null。 */
+  /** Bits left over; negative means it overflows. null when not encodable. */
   headroom: number | null;
   willFit: boolean;
-  /** willFit 為 false 時的原因。 */
+  /** Why, when willFit is false. */
   reason?: string;
 }
 

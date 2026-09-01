@@ -1,12 +1,14 @@
-/* App Clip Code 的常數表 —— 抽自 URLCompression.framework，並用原生
- * AppClipCodeGenerator 逐項驗證。重建方式見 scripts/extract-wordbook.mjs。勿手改。 */
+/* App Clip Code constant tables — extracted from URLCompression.framework and
+ * verified entry by entry against the native AppClipCodeGenerator.
+ * See scripts/extract-wordbook.mjs to rebuild. Do not edit by hand. */
 
-/* path/query 詞庫：156 個詞，索引即 8-bit wordbook 編碼值。
- * 153 個索引可直接從原生輸出量到；'data' / 'id' / 'store-locator' 由相鄰索引與探測確認。 */
+/* path/query wordbook: 156 words, where the index is the 8-bit wordbook code.
+ * 153 indices were read straight off native output; 'data', 'id' and
+ * 'store-locator' were pinned down from their neighbours plus probing. */
 export const KNOWN_WORDS: Record<string, number> = {"about":0,"access":1,"account":2,"add":3,"app":4,"archives":5,"article":6,"attraction":7,"author":8,"bag":9,"biz":10,"book":11,"brand":12,"brands":13,"browse":14,"buy":15,"cancel":16,"cart":17,"cat":18,"catalog":19,"category":20,"categories":21,"channel":22,"charts":23,"checkin":24,"checkout":25,"collection":26,"collections":27,"company":28,"compare":29,"connect":30,"contact":31,"content":32,"contents":33,"cost":34,"coupons":35,"create":36,"data":37,"demo":38,"destinations":39,"detail":40,"discover":41,"download":42,"entry":43,"event":44,"events":45,"explore":46,"faq":47,"fetch":48,"finance":49,"find":50,"food":51,"fund":52,"game":53,"gift":54,"goods":55,"guide":56,"health":57,"help":58,"home":59,"hotel":60,"hotels":61,"id":62,"index":63,"info":64,"item":65,"item_id":66,"join":67,"lifestyle":68,"list":69,"listen":70,"live":71,"local":72,"location":73,"locations":74,"locator":75,"login":76,"manage":77,"menu":78,"more":79,"music":80,"name":81,"news":82,"note":83,"open":84,"order":85,"overview":86,"park":87,"part":88,"pay":89,"payment":90,"payments":91,"play":92,"post":93,"posts":94,"preview":95,"product":96,"product_id":97,"products":98,"profile":99,"promotion":100,"purchase":101,"rate":102,"recipe":103,"recipes":104,"reservation":105,"reservations":106,"reserve":107,"retail":108,"review":109,"rewards":110,"sale":111,"scan":112,"schedule":113,"search":114,"sell":115,"send":116,"service":117,"share":118,"shop":119,"show":120,"showtime":121,"site":122,"song":123,"special":124,"stations":125,"status":126,"store":127,"store-locator":128,"stores":129,"stories":130,"story":131,"tag":132,"tags":133,"terms":134,"tickets":135,"tips":136,"title":137,"today":138,"top":139,"topic":140,"tours":141,"track":142,"transaction":143,"travel":144,"try":145,"update":146,"upload":147,"use":148,"user":149,"vehicles":150,"video":151,"view":152,"visit":153,"watch":154,"wiki":155};
 
-/* host format 1 的固定 TLD 表：8-bit 索引，1–113 連續無缺口。
- * 全部由原生輸出量得（探測 409 個 TLD，113 個命中 format 1）。
- * 索引 0 量不到 —— 那格對應的 TLD 一定落在 20 個 Huffman TLD 裡，永遠走 format 0，
- * 所以編碼端用不到它。 */
+/* Fixed TLD table for host format 1: an 8-bit index, 1-113 contiguous with no gaps.
+ * All of it measured from native output (409 TLDs probed, 113 of them hit format 1).
+ * Index 0 cannot be measured — whatever TLD sits there is necessarily one of the
+ * 20 Huffman TLDs, which always take format 0, so the encoder never reaches it. */
 export const FIXED_TLDS: Record<string, number> = {".es":1,".ch":2,".eu":3,".io":4,".vn":5,".be":6,".at":7,".ua":8,".cz":9,".gov":10,".tv":11,".gr":12,".cf":13,".kr":14,".tw":15,".me":16,".biz":17,".site":18,".se":19,".tr":20,".id":21,".mx":22,".wang":23,".hu":24,".nz":25,".ro":26,".cc":27,".top":28,".club":29,".dk":30,".ie":31,".za":32,".ar":33,".no":34,".online":35,".cl":36,".tk":37,".fi":38,".my":39,".hk":40,".sk":41,".il":42,".pt":43,".th":44,".nu":45,".sg":46,".kz":47,".by":48,".pk":49,".su":50,".to":51,".ph":52,".live":53,".ae":54,".space":55,".mobi":56,".ai":57,".app":58,".is":59,".news":60,".name":61,".tech":62,".vip":63,".fun":64,".network":65,".cloud":66,".lu":67,".am":68,".website":69,".jobs":70,".life":71,".win":72,".ly":73,".do":74,".tn":75,".md":76,".shop":77,".store":78,".media":79,".world":80,".travel":81,".work":82,".int":83,".qa":84,".global":85,".company":86,".host":87,".wiki":88,".stream":89,".gt":90,".py":91,".video":92,".bid":93,".cm":94,".mo":95,".tel":96,".digital":97,".center":98,".plus":99,".ltd":100,".services":101,".so":102,".tt":103,".support":104,".pub":105,".help":106,".gl":107,".museum":108,".pm":109,".business":110,".bike":111,".loan":112,".estate":113};

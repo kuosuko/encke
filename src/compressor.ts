@@ -1,10 +1,11 @@
 /**
- * App Clip Code URL 壓縮器 — 純 TS 移植
- * 演算法從 Apple URLCompression.framework 逆向，
- * 並以原生 AppClipCodeGenerator 為 oracle 逐位驗證。
+ * App Clip Code URL compressor — a pure TS port.
+ * The algorithm was reverse-engineered from Apple's
+ * URLCompression.framework and verified bit for bit against the native
+ * AppClipCodeGenerator as an oracle.
  *
- * trie 資料格式（h.data / spq.data / cpq.data）:
- *   node_count = 1 + k + k² (深度 0..2), 每node k 個 uint16 BE 頻率
+ * trie data format (h.data / spq.data / cpq.data):
+ *   node_count = 1 + k + k² (depths 0..2), k uint16 BE frequencies per node
  *   child(node, sym) = k*node + 1 + sym
  */
 
@@ -23,11 +24,15 @@ export const HUFF_TLDS: Record<string, number> = {
   ".in": 0x03d5, ".edu": 0x03c1, ".us": 0x0361, ".pl": 0x0352, ".ga": 0x0346,
 };
 
-// --- Huffman（Apple 規則：min-heap, tie = 子樹「最左葉」的符號序, 先彈 = left = 0）---
+// --- Huffman (Apple's rules: min-heap, tie = symbol order of the subtree's
+// LEFTMOST LEAF, first popped = left = 0) ---
 //
-// tie-break 用的是最左葉，不是子樹裡字母序最小的符號 —— 這兩者只在少數節點上不同，
-// 但足以讓某些 URL 編出跟原生不一樣的碼（掃出來就是別的網址）。
-// 這條規則是拿 790 組 URL 對原生輸出做差異測試選出來的，八種候選規則裡只有它全中。
+// The tie-break compares leftmost leaves, NOT the alphabetically smallest
+// symbol in the subtree. The two differ at only a handful of nodes, but that
+// is enough to make some URLs encode differently from the native tool — and
+// a code that scans to a different address is just a wrong code.
+// This rule was chosen by diffing 790 URLs against native output; of eight
+// candidate rules, it was the only one that matched every single case.
 type Node = { freq: number; first: string; leaf?: number; l?: Node; r?: Node };
 
 export function buildHuffman(freqs: number[], syms: string[]): string[] {
@@ -47,8 +52,8 @@ export function buildHuffman(freqs: number[], syms: string[]): string[] {
     return heap.splice(bi, 1)[0];
   };
   while (heap.length > 1) {
-    const l = pop();   // 先彈 = left = 0
-    const r = pop();   // 後彈 = right = 1
+    const l = pop();   // first popped = left = 0
+    const r = pop();   // second popped = right = 1
     heap.push({ freq: l.freq + r.freq, first: l.first, l, r });
   }
   const walk = (n: Node, p: string): void => {
@@ -105,7 +110,7 @@ class Coder {
 let coders: { host: Coder; spq: Coder; cpq: Coder } | null = null;
 let builtFrom: TrieTables | null = null;
 
-/** 取得三個 coder；表換掉的話會自動重建。 */
+/** Get the three coders, rebuilding them automatically if the tables were swapped. */
 function C() {
   const t = getTrieTables();
   if (!coders || builtFrom !== t) {
@@ -119,7 +124,7 @@ function C() {
   return coders;
 }
 
-/** @deprecated 改用 setTrieTables({ h, spq, cpq }) */
+/** @deprecated Use setTrieTables({ h, spq, cpq }) instead. */
 export function setTrieData(h: Uint8Array, spq: Uint8Array, cpq: Uint8Array): void {
   setTrieTables({ h, spq, cpq });
 }
@@ -127,9 +132,11 @@ export function setTrieData(h: Uint8Array, spq: Uint8Array, cpq: Uint8Array): vo
 const tldSyms = Object.keys(HUFF_TLDS).sort();
 const tldCodes = buildHuffman(tldSyms.map(t => HUFF_TLDS[t]), tldSyms);
 
-// --- 常數表（extracted from Apple binary, MIT-licensed reference cross-checked）---
+// --- Constant tables (extracted from the Apple binary, cross-checked
+// against an MIT-licensed reference) ---
 const KNOWN_WORDS = KW;
-// 上表若與 156 個有差，缺的詞會自動 fallback 到其他編碼，不影響正確性
+// If the table above ever falls short of the 156 entries, the missing words
+// fall back to another encoding on their own — correctness is unaffected.
 
 function leb128(v: number): string {
   let out = "";
@@ -143,12 +150,14 @@ const fixed6 = (s: string) => [...s].map(c => {
 }).join("");
 const spq = (start: string, val: string, term: boolean) => C().spq.encode([...val + (term ? "|" : "")], start);
 /**
- * 從候選裡挑最短；長度相同時取「後面」的。
+ * Pick the shortest candidate; on a tie, take the LATER one.
  *
- * 所以候選必須依偏好由低到高排列。原生在 tie 時的偏好是
+ * Which means candidates must be listed from least to most preferred. The
+ * native tie-break order is
  *   wordbook > leb128 > spq > fixed6
- * （由 800 組 URL 對原生輸出做差異測試反推 —— 不是隨便選的順序，
- *   改動它會讓一部分 URL 編出跟原生不同的環碼。）
+ * (recovered by diffing 800 URLs against native output — this ordering is
+ *  not arbitrary, and changing it makes a subset of URLs encode to a
+ *  different code than the native tool produces.)
  */
 const pickShortest = (candidates: (string | null)[]): string => {
   let best: string | null = null;
@@ -164,20 +173,27 @@ function encodeHost(host: string, hasPQ: boolean): [string, number] {
   const ld = host.lastIndexOf(".");
   if (ld < 0) throw new Error(`host has no TLD: ${host}`);
   const tld = host.slice(ld), domain = host.slice(0, ld) + (hasPQ ? "|" : "");
-  // 三種格式全部算過再挑最短；長度相同時取編號大的（與原生一致）。
+  // Compute all three formats, then take the shortest; on a tie, the higher
+  // format number wins (matching native).
   const candidates: [string, number][] = [];
 
-  // format 0：20 個高頻 TLD 走 Huffman
+  // format 0: Huffman code for one of the 20 high-frequency TLDs
   if (tld in HUFF_TLDS) {
     const i = tldSyms.indexOf(tld);
     try { candidates.push([tldCodes[i] + C().host.encode([...domain]), 0]); } catch { /* skip */ }
   }
-  // format 1：113 個 TLD 走 8-bit 固定索引
+  // format 1: 8-bit fixed index into the 113 TLD table
   const fixed = FIXED_TLDS[tld];
   if (fixed !== undefined) {
     try { candidates.push([fixed.toString(2).padStart(8, "0") + C().host.encode([...domain]), 1]); } catch { /* skip */ }
   }
-  // format 2：整條 host 走 Huffman
+  // format 2: the whole host through Huffman
+  const badHostChar = [...host].find(c => !HOST_SYMS.includes(c));
+  if (badHostChar)
+    throw new Error(
+      `Host contains "${badHostChar}", which App Clip Code URLs cannot encode. ` +
+      `Hosts are limited to a-z, 0-9, "-" and ".".`
+    );
   candidates.push([C().host.encode([...host + (hasPQ ? "|" : "")]), 2]);
 
   return candidates.reduce((best, c) => (c[0].length <= best[0].length ? c : best));
@@ -186,8 +202,8 @@ function encodeHost(host: string, hasPQ: boolean): [string, number] {
 const buildItems = (path: string, hasQuery: boolean): string[] => {
   if (!path) return [];
   const items = path.replace(/^\//, "").split("/").filter(Boolean);
-  // 光是 "/" 的 path 只有在後面沒有 query 時才需要那個 "/" 項目 ——
-  // 有 query 的話 "https://a.co/?x=1" 原生不會為它額外花 2 bits。
+  // A path of just "/" only needs the "/" item when no query follows it —
+  // for "https://a.co/?x=1" the native tool does not spend the extra 2 bits.
   if (items.length === 0 && hasQuery) return [];
   if (items.length === 0 || path.endsWith("/")) items.push("/");
   return items;
@@ -272,6 +288,34 @@ function templatePQ(path: string, query: string, frag: string): string {
   return bits;
 }
 
+/**
+ * The characters a path / query / fragment can hold directly are exactly the
+ * CPQ alphabet; everything else gets percent-encoded.
+ *
+ * Apple's tool rejects the entire URL on any character outside that alphabet
+ * (`@`, `~`, `!`, `(`, `$` … all of them), yet it accepts the `%40` spelling
+ * — and per RFC 3986 the two name the same resource. So rather than turn the
+ * user away, convert it for them.
+ *
+ * This does not affect bit-for-bit parity: no character inside the alphabet
+ * is ever touched, so every URL the native tool would accept still produces
+ * identical output.
+ */
+const PQ_SAFE = new Set(CPQ_SYMS);
+
+const percentEncodeChar = (ch: string): string =>
+  [...new TextEncoder().encode(ch)]
+    .map(b => "%" + b.toString(16).toUpperCase().padStart(2, "0"))
+    .join("");
+
+export function percentEncodeUnsupported(s: string): string {
+  // Leave existing %XX escapes alone rather than double-encoding them; with
+  // the u flag, `.` consumes a whole code point
+  return s.replace(/%[0-9a-fA-F]{2}|./gsu, tok =>
+    (tok.length === 3 && tok[0] === "%") || PQ_SAFE.has(tok) ? tok : percentEncodeChar(tok)
+  );
+}
+
 function parseURL(url: string) {
   if (!url.toLowerCase().startsWith("https://")) throw new Error("Only https is supported");
   const rest = url.slice(8);
@@ -285,18 +329,22 @@ function parseURL(url: string) {
   const query = queryAt >= 0 ? beforeFrag.slice(queryAt + 1) : "";
 
   const slashAt = beforeQuery.indexOf("/");
+  const host = (slashAt >= 0 ? beforeQuery.slice(0, slashAt) : beforeQuery).toLowerCase();
+  if (host.includes("@"))
+    throw new Error(`Userinfo is not supported in App Clip Code URLs: ${host}`);
+
   return {
-    host: (slashAt >= 0 ? beforeQuery.slice(0, slashAt) : beforeQuery).toLowerCase(),
-    path: slashAt >= 0 ? beforeQuery.slice(slashAt) : "",
-    query,
-    frag,
+    host,
+    path: percentEncodeUnsupported(slashAt >= 0 ? beforeQuery.slice(slashAt) : ""),
+    query: percentEncodeUnsupported(query),
+    frag: percentEncodeUnsupported(frag),
   };
 }
 
-/** 壓縮後的 payload 上限；超過就塞不進環碼。 */
+/** Ceiling on the compressed payload; anything larger will not fit in a code. */
 export const PAYLOAD_LIMIT_BITS = 128;
 
-/** 不檢查長度的壓縮，給 estimatePayloadBits() 用。 */
+/** Compression without the length check, for estimatePayloadBits(). */
 export function compressBitsUnchecked(url: string): string {
   const { host: h0, path, query, frag } = parseURL(url);
   let host = h0, sub = 0;
@@ -317,8 +365,9 @@ export function compressBitsUnchecked(url: string): string {
       try { cands.push(["1" + segPQ(path, query, frag), 0]); } catch {}
     }
     if (cands.length === 0) throw new Error("cannot encode path/query");
-    // 勝出的候選同時決定 template_type 旗標 —— 漏掉這個的話，
-    // 解碼端會用錯的模式解析 path/query，掃出來就是別的網址。
+    // The winning candidate also decides the template_type flag. Miss that
+    // and the decoder parses the path/query in the wrong mode, so the code
+    // scans to a different address.
     const winner = cands.reduce((best, c) => (c[0].length <= best[0].length ? c : best));
     pq = winner[0];
     tt = winner[1];
@@ -340,14 +389,15 @@ function compressBits(url: string): string {
 }
 
 /**
- * 壓縮 URL → 128-bit payload（16 bytes，右對齊）。
- * 右對齊是 codec 真正吃的格式 —— 左移補齊會產生完全不同的環碼。
+ * Compress a URL into a 128-bit payload (16 bytes, right-aligned).
+ * Right-aligned is what the codec actually expects — pad to the left instead
+ * and you get a completely different code.
  */
 export function compressURL(url: string): Uint8Array {
   return compressedBitsToPayload(compressBits(url));
 }
 
-/** 壓縮位元字串 → 16 bytes，右對齊（左邊補 0）。 */
+/** Compressed bit string -> 16 bytes, right-aligned (zero-padded on the left). */
 export function compressedBitsToPayload(bits: string): Uint8Array {
   const v = BigInt("0b" + bits);
   const out = new Uint8Array(16);

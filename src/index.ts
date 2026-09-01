@@ -1,14 +1,16 @@
 /**
- * encke — 純 TypeScript 的 App Clip Code 生成器
+ * encke — App Clip Code generation in pure TypeScript
  *
- * Node（含 Next.js server）：直接用，Huffman 表會自動從套件的 data/ 讀進來。
- * 瀏覽器 / Workers：先 `await loadTables()`，或改用 `generateAppClipCodeAsync()`。
+ * Node (including the Next.js server): just call it. The Huffman tables are
+ * read from the package's data/ directory automatically.
+ * Browsers / Workers: `await loadTables()` first, or use
+ * `generateAppClipCodeAsync()` instead.
  *
  * @example
  * import { generateAppClipCode } from "encke";
  * const { svg } = generateAppClipCode({ url: "https://oru.okuso.uk/su" });
  *
- * @example 自訂中心
+ * @example Custom center
  * const { svg } = generateAppClipCode({
  *   url: "https://oru.okuso.uk/su",
  *   center: `<circle cx="0" cy="0" r="90" fill="#007AFF"/>`,
@@ -37,6 +39,7 @@ export {
   compressURL,
   compressBitsUnchecked,
   compressedBitsToPayload,
+  percentEncodeUnsupported,
   PAYLOAD_LIMIT_BITS,
   setTrieData,
 } from "./compressor";

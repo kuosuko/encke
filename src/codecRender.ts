@@ -1,6 +1,6 @@
 /**
- * Codec + Render — 已用原生 oracle 驗證（su/sv/st 208bits 全一致）
- * 演算法詳見 RE_NOTES.md
+ * Codec + Render — verified against the native oracle (su/sv/st, all 208
+ * bits identical). Algorithm write-up in RE_NOTES.md.
  */
 import { gfTables, rsEncode } from "./reedSolomon";
 const E8L8 = gfTables(0x11d, 256), E4L4 = gfTables(0x13, 16);
@@ -37,7 +37,10 @@ export const RING_ROT = [-78, -85, -70, -63, -70] as const;
 export const HALF_GAP = [7.5, 5.6, 5.0, 4.2, 3.5] as const;
 export const STROKE_WIDTH = 23.5;
 
-/** bits → 每個可見 slot 的 {ring, slotIndex, color}（弧向右延伸吸收隱藏 slot）*/
+/**
+ * bits -> {ring, slotIndex, color} for each visible slot
+ * (every arc extends rightward, absorbing the hidden slots it meets)
+ */
 export function bitsToArcs(bits: string) {
   const gap = bits.slice(0, 128), colors = bits.slice(128);
   const arcs: { ring: number; slot: number; color: 0 | 1; startDeg: number; endDeg: number }[] = [];
@@ -56,8 +59,9 @@ export function bitsToArcs(bits: string) {
     const step = 360 / n, hg = HALF_GAP[ring];
     for (let i = 0; i < n; i++) {
       if (vis[i] === null) continue;
-      // 每條弧往右吃掉連續的隱藏 slot，且會繞過 0 度 ——
-      // 環上最後一條可見弧要一路吃到開頭的隱藏 slot 為止。
+      // Each arc eats the run of hidden slots to its right, and it wraps
+      // past 0 degrees — the last visible arc on a ring keeps going through
+      // the hidden slots at the start.
       let k = i + 1;
       while (k < i + n && vis[k % n] === null) k++;
       arcs.push({ ring, slot: i, color: vis[i]!, startDeg: i * step + hg, endDeg: k * step - hg });

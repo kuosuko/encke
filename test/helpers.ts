@@ -14,9 +14,10 @@ export interface Oracle {
 export const oracle: Oracle = JSON.parse(fixture("oracle.json"));
 
 /**
- * 每個 ring 壓成一行 "color@r:end|end;…"。
- * 原生用 sweep=0 反向畫、我們用 sweep=1 正向畫 —— 同一段弧，所以端點排序後再比。
- * 必須與 scripts/gen-oracle.mjs 的 extractRings() 完全一致。
+ * Flatten each ring to one line: "color@r:end|end;…".
+ * Native draws backwards with sweep=0 and we draw forwards with sweep=1 —
+ * the same arc either way, so sort the endpoints before comparing.
+ * Must stay exactly in step with extractRings() in scripts/gen-oracle.mjs.
  */
 export function ringSignatures(svg: string): string[] {
   const markers = svg.slice(svg.indexOf('<g id="Markers"'));
@@ -34,7 +35,7 @@ export function ringSignatures(svg: string): string[] {
   );
 }
 
-/** 解析 "fg bg value" 三欄的取樣檔。 */
+/** Parse a sample file of three columns: "fg bg value". */
 export function parseSamples(name: string): [string, string, string][] {
   return fixture(name)
     .trim()
@@ -43,6 +44,6 @@ export function parseSamples(name: string): [string, string, string][] {
     .filter(parts => parts.length === 3) as [string, string, string][];
 }
 
-/** "aabbcc" / "AABBCC" → [r,g,b] */
+/** "aabbcc" / "AABBCC" -> [r,g,b] */
 export const rgb = (hex: string): [number, number, number] =>
   [0, 2, 4].map(i => parseInt(hex.slice(i, i + 2), 16)) as [number, number, number];

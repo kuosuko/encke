@@ -1,9 +1,12 @@
 /**
- * 從 URLCompression.framework 重建 path/query 詞庫。
+ * Recover the path/query wordbook from URLCompression.framework.
  *
- * 詞庫在 binary 裡是一段連續的字串表，但短字串（data / id / app …）會被 linker
- * 去重到別處，所以 `strings` 的順序會缺項 —— 必須再用原生工具逐詞量索引才對得起來。
- * 這個腳本只印出可見區塊供人工核對；權威索引由 npm run test:oracle 驗證。
+ * The wordbook sits in the binary as one contiguous string table, but the
+ * linker dedupes short strings (data / id / app …) elsewhere, so the order
+ * `strings` reports has holes in it — the only way to line the indices up is
+ * to measure them word by word against the native tool.
+ * This script just prints the visible block for manual cross-checking; the
+ * authoritative indices are verified by npm run test:oracle.
  *
  *   node scripts/extract-wordbook.mjs
  */

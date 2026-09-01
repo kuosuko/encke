@@ -23,7 +23,8 @@ describe("checkColors", () => {
   });
 
   it("agrees with the native validator on the sampled pairs", () => {
-    // 624 組原生取樣（灰階全格 + 隨機彩色）。規則是近似 —— 釘住一致率。
+    // 624 native samples (the full greyscale grid plus random colors). The
+    // rule is an approximation — this pins the agreement rate down.
     const samples = parseSamples("color-validity.txt");
     const agree = samples.filter(([fg, bg, verdict]) => checkColors(fg, bg).ok === (verdict === "OK"));
     expect(agree.length / samples.length).toBeGreaterThanOrEqual(0.97);

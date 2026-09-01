@@ -1,5 +1,5 @@
 /**
- * Reed-Solomon encoder — ZXing 相容（GenericGF 演算法，公開規格）
+ * Reed-Solomon encoder — ZXing compatible (GenericGF algorithm, public spec)
  */
 export interface GF { exp: Int32Array; log: Int32Array; size: number }
 
@@ -19,7 +19,7 @@ function mul(gf: GF, a: number, b: number): number {
   return gf.exp[(gf.log[a] + gf.log[b]) % (gf.size - 1)];
 }
 
-/** ZXing ReedSolomonEncoder.encode — 回傳 parity symbols */
+/** ZXing ReedSolomonEncoder.encode — returns the parity symbols */
 export function rsEncode(msg: number[], ecBytes: number, gf: GF, fcr: number): number[] {
   // generator poly
   let gen = [1];

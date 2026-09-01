@@ -1,7 +1,7 @@
 /**
- * 與 Apple 原生 AppClipCodeGenerator 逐弧比對。
- * fixture 由 scripts/gen-oracle.mjs 產生（需要 macOS + 原生工具），已 commit，
- * 所以任何機器都能跑這組測試。
+ * Arc-by-arc comparison against Apple's own AppClipCodeGenerator.
+ * The fixture is produced by scripts/gen-oracle.mjs (which needs macOS and
+ * the native tool) and is committed, so these tests run on any machine.
  */
 import { describe, it, expect } from "vitest";
 import { generateAppClipCode } from "../src/node";
@@ -9,7 +9,8 @@ import { oracle, ringSignatures } from "./helpers";
 
 describe(`arc geometry matches the native generator (${oracle.generator})`, () => {
   it.each(oracle.cases.map(c => [c.url, c] as const))("%s", (_url, expected) => {
-    // fixture 用 --index 1 --logo none：黑環白底、800×800 畫布、無中心圖
+    // The fixture was made with --index 1 --logo none: black on white, an
+    // 800x800 canvas, no center graphic
     const { svg } = generateAppClipCode({
       url: expected.url,
       templateIndex: 1,
@@ -33,7 +34,7 @@ describe("colors match the native generator", () => {
   it.each(byIndex.map(c => [c.index!, c] as const))("template %i", (index, expected) => {
     const { colors } = generateAppClipCode({ url: "https://oru.okuso.uk/su", templateIndex: index });
     expect(colors.background).toBe(expected.background);
-    // 原生輸出裡的兩個 stroke 顏色就是「前景 + 輔助色」
+    // The two stroke colors in native output are exactly foreground + tint
     expect([colors.foreground, colors.tint].sort()).toEqual(expected.strokes);
   });
 });

@@ -1,6 +1,7 @@
 /**
- * dist/tables.cjs 是 1.4 MB 的 base64，而且沒人會用到 ——
- * Node 直接讀 data/*.data，瀏覽器走 ESM。刪掉省 tarball。
+ * dist/tables.cjs is 1.4 MB of base64 that nothing ever reaches — Node reads
+ * data/*.data directly and browsers take the ESM path. Drop it and keep the
+ * tarball small.
  */
 import { rmSync, existsSync, chmodSync } from "node:fs";
 

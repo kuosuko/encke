@@ -1,8 +1,8 @@
 /**
- * App Clip Code 生成器 — 公開 API
- * 管線：URL →(壓縮)→ rawBits →(codec)→ 208 bits →(render)→ SVG
- * 100% 純 TypeScript、零 Apple 依賴、零 Apple 美術資產。
- * 演算法細節見 RE_NOTES.md。
+ * App Clip Code generator — the public API.
+ * Pipeline: URL ->(compress)-> rawBits ->(codec)-> 208 bits ->(render)-> SVG
+ * 100% pure TypeScript, no Apple dependency, no Apple artwork.
+ * Algorithm details in RE_NOTES.md.
  */
 import { compressBits, compressedBitsToPayload } from "./compressor";
 import { encodePayload, bitsToArcs, arcPath, RING_R, RING_ROT, STROKE_WIDTH } from "./codecRender";
@@ -11,57 +11,68 @@ import { TEMPLATE_COLORS, tintFor, normalizeHex } from "./colors";
 import { assertColorsScannable } from "./colorCheck";
 import { loadTables, type LoadTablesOptions } from "./tables/load";
 
-/** 中心視覺："disc" = 預設實心圓盤，"none" = 留空，或自訂 SVG 字串（以 0,0 為中心）。 */
+/**
+ * Center visual: "disc" is the default filled disc, "none" leaves it empty,
+ * or pass your own SVG string (centered on 0,0).
+ */
 export type Center = string | "disc" | "none";
 
 /**
- * 畫布配置。
- * - `code`   800×800，整張都是環碼（對應原生 `--logo none`）
- * - `lockup` -50 -50 900 1100，下方留出品牌條空間（對應原生 `--logo badge` 的畫布）
- * - `auto`   有 lockupSvg 就用 lockup，否則用 code
+ * Canvas layout.
+ * - `code`   800x800, all code and nothing else (native `--logo none`)
+ * - `lockup` -50 -50 900 1100, leaving room for a lockup below (the canvas
+ *            native uses for `--logo badge`)
+ * - `auto`   lockup when lockupSvg is given, otherwise code
  */
 export type Layout = "auto" | "code" | "lockup";
 
 export interface GenerateOptions {
-  /** 要編碼的網址（需掛 AASA 的短網域） */
+  /** The URL to encode (a short domain serving an AASA file). */
   url: string;
-  /** 前景色（環碼），# 可省略 */
+  /** Foreground color (the code itself); # optional. */
   foreground?: string;
-  /** 背景色，# 可省略 */
+  /** Background color; # optional. */
   background?: string;
-  /** 輔助色（data-color="1" 的弧）。不給就依配色自動推導。 */
+  /** Tint color (arcs with data-color="1"). Derived from the pair when omitted. */
   tint?: string;
-  /** 內建 18 種配色模板索引（0-17），覆蓋 fg/bg/tint */
+  /** Index into the 18 built-in color templates (0-17); overrides fg/bg/tint. */
   templateIndex?: number;
-  /** 中心視覺，預設 "disc" */
+  /** Center visual; defaults to "disc". */
   center?: Center;
-  /** @deprecated 改名為 center */
+  /** @deprecated Renamed to center. */
   logo?: Center;
-  /** 自訂中心 SVG 的縮放（識別區建議直徑 ≈ 210 units） */
+  /**
+   * Scale for a custom center SVG. The recognition area is 213.4486 units
+   * across — see CENTER_DIAMETER.
+   */
   centerScale?: number;
-  /** 環碼下方的自有品牌條（你的 SVG，座標同 viewBox）— 預設無 */
+  /** Your own lockup below the code, in viewBox coordinates. None by default. */
   lockupSvg?: string;
-  /** 畫布配置，預設 "auto" */
+  /** Canvas layout; defaults to "auto". */
   layout?: Layout;
   /**
-   * 跳過配色可掃描性檢查。預設 false —— 對比不足的配色原生工具會直接拒絕，
-   * 印出來也掃不到，所以預設擋下來。
+   * Skip the scannability check on the colors. Defaults to false — the
+   * native tool rejects low-contrast pairs outright and they genuinely do
+   * not scan once printed, so they are blocked by default here too.
    */
   allowUnscannableColors?: boolean;
 }
 
 export interface GenerateResult {
   svg: string;
-  /** 壓縮後的 URL 位元字串 */
+  /** The compressed URL as a bit string. */
   rawBits: string;
-  /** 補到 128 bit 的 payload */
+  /** The payload, padded to 128 bits. */
   payloadHex: string;
   arcCount: number;
-  /** 實際用到的三個顏色（不含 #） */
+  /** The three colors actually used (no leading #). */
   colors: { foreground: string; background: string; tint: string };
 }
 
-/** lockup 版畫布沿用原生的 -0.99 / -3.8 位移，方便跟原生輸出逐點比對。 */
+/**
+ * The lockup canvas keeps native's -0.99 / -3.8 offset, so the output stays
+ * point-by-point comparable with the native tool.
+ */
 const LOCKUP_DX = -0.99, LOCKUP_DY = -3.8;
 
 function resolveColors(opts: GenerateOptions) {
@@ -93,15 +104,15 @@ export function generateAppClipCode(opts: GenerateOptions): GenerateResult {
   const viewBox = isLockup ? "-50 -50 900 1100" : "0 0 800 800";
   const shift = isLockup ? ` transform="translate(${dx} ${dy})"` : "";
 
-  // 1. 壓縮（Huffman，與原生逐位一致）
+  // 1. Compress (Huffman; bit-for-bit identical to native)
   const rawBits = compressBits(url);
 
-  // 2. codec：payload（右對齊）→ 208 bits
+  // 2. Codec: payload (right-aligned) -> 208 bits
   const payload = compressedBitsToPayload(rawBits);
   const payloadHex = Array.from(payload, b => b.toString(16).padStart(2, "0")).join("");
   const bits = encodePayload(payload);
 
-  // 3. render：slot 可見性 + 顏色流 → 弧線
+  // 3. Render: slot visibility + color stream -> arcs
   const arcs = bitsToArcs(bits);
   const byRing: string[][] = [[], [], [], [], []];
   for (const a of arcs) {
@@ -116,7 +127,7 @@ export function generateAppClipCode(opts: GenerateOptions): GenerateResult {
     .map((ps, i) => `<g name="ring-${i + 1}" transform="rotate(${RING_ROT[i]} 400 400)">\n${ps.join("\n")}\n</g>`)
     .join("\n");
 
-  // 4. 中心（預設純色圓盤）+ 使用者自帶 lockup
+  // 4. The center (a plain disc by default) plus the caller's own lockup
   const centerG =
     center === "none"
       ? ""
@@ -146,8 +157,9 @@ export function generateDataURL(opts: GenerateOptions): string {
 }
 
 /**
- * 瀏覽器 / Workers 用的方便版：先確保 Huffman 表載好，再生成。
- * Node 下 loadTables() 是 no-op，兩者行為一致。
+ * Convenience wrapper for browsers / Workers: make sure the Huffman tables
+ * are loaded, then generate. Under Node loadTables() is a no-op, so the two
+ * behave the same.
  */
 export async function generateAppClipCodeAsync(
   opts: GenerateOptions & { tables?: LoadTablesOptions }
