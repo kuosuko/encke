@@ -11,7 +11,7 @@ No macOS. No native binaries. Bit-for-bit identical to Apple's own generator.
 
 [![npm](https://img.shields.io/npm/v/encke)](https://www.npmjs.com/package/encke)
 [![license](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
-[![types](https://img.shields.io/badge/types-included-30a46c)](./dist/index.d.ts)
+[![types](https://img.shields.io/badge/types-included-30a46c)](./src/index.ts)
 [![node](https://img.shields.io/badge/node-%E2%89%A518-334155)](./package.json)
 
 ```bash
@@ -79,7 +79,7 @@ Drop `tables` and it fetches the embedded copy instead (~1.4 MB, still its own c
 <tr><td><b>foreground</b><br><b>background</b></td><td>Hex colors, <code>#</code> optional.</td></tr>
 <tr><td><b>templateIndex</b></td><td>One of the 18 built-in color schemes — the same ones Apple's CLI offers via <code>--index</code>. Overrides fg/bg.</td></tr>
 <tr><td><b>center</b></td><td>What sits in the middle: <code>"disc"</code> (default, plain solid disc) · <code>"none"</code> · or your own SVG string designed around <code>(0,0)</code>.</td></tr>
-<tr><td><b>centerScale</b></td><td>Scale for a custom center. Keep the visible chunk around 210 units — the camera needs a solid high-contrast blob to lock onto.</td></tr>
+<tr><td><b>centerScale</b></td><td>Scale for a custom center. Keep the visible chunk around 213 units — the camera needs a solid high-contrast blob to lock onto.</td></tr>
 <tr><td><b>lockupSvg</b></td><td>Optional branding strip under the ring. Your SVG, your artwork.</td></tr>
 <tr><td><b>tint</b></td><td>The secondary arc color. Leave it out — it is derived from your palette, and getting it wrong is the usual reason a color code stops scanning.</td></tr>
 <tr><td><b>layout</b></td><td><code>"code"</code> is a tight 800×800 canvas; <code>"lockup"</code> leaves room under the ring for <code>lockupSvg</code>. Default <code>"auto"</code> picks by whether you passed one.</td></tr>
@@ -142,10 +142,72 @@ generateAppClipCode({ url });                        // synchronous from here on
 
 `generateAppClipCodeAsync()` does both in one call. The tables are never part of your main bundle: importing `encke` costs about 31 KB.
 
+## HTTP endpoint
+
+`encke/handler` turns a query string into an SVG. It takes a standard `Request` and returns a
+standard `Response`, so the same function deploys to Cloudflare Workers, a Next.js route handler,
+Deno, or Bun:
+
+```ts
+import { createHandler } from "encke/handler";
+
+export default { fetch: createHandler() };                        // Cloudflare Workers
+export const GET = createHandler({ allowedHosts: ["example.com"] }); // Next.js app/code/route.ts
+```
+
+To try it locally:
+
+```bash
+npx encke serve --port 8787
+```
+
+```
+GET /?url=https://example.com/a&foreground=0071e3&background=FFFFFF&size=512
+```
+
+| Parameter | Aliases | Meaning |
+|---|---|---|
+| `url` | `u` | The https URL to encode. Required. |
+| `foreground` | `fg`, `f` | Ring color, hex. |
+| `background` | `bg`, `b` | Background color, hex. |
+| `tint` | | Secondary arc color. Derived from the pair if omitted. |
+| `index` | `template`, `i` | Built-in color template, `0`–`17`. Overrides the three above. |
+| `center` | | `disc` (default) or `none`. |
+| `layout` | | `auto`, `code`, or `lockup`. |
+| `size` | | Adds `width`/`height` in px, `16`–`4096`. `viewBox` only if omitted. |
+| `force` | | Generate even if the colors will not scan. |
+| `download` | | Send `Content-Disposition: attachment`. |
+
+Responses are `image/svg+xml` with an `ETag` and a one-year immutable `Cache-Control` — the same
+query always produces the same bytes, so it sits behind a CDN with no invalidation story. `400`
+means a bad parameter; `422` means the parameters were valid but this combination cannot produce a
+code (URL too long, colors too close). Both return `{"error": "..."}`.
+
+Two things worth knowing before you put one on the public internet:
+
+- **Set `allowedHosts`.** Without it your endpoint will happily mint codes pointing at anyone's
+  site. It matches the host and its subdomains.
+- **Custom center and lockup artwork are not exposed over HTTP, by design.** Accepting SVG markup
+  in a query parameter would let a caller put arbitrary markup inside a document served from your
+  origin, and SVG is scriptable when opened directly. Call `generateAppClipCode()` from your own
+  code for that.
+
+### Without a server
+
+Generation is pure client-side work, so a static page can take the same query parameters and draw
+the code in the browser — no backend, deployable to GitHub Pages or any CDN. The playground in this
+repo does exactly that at `/render/?url=…`.
+
+The tradeoff is real and worth stating plainly: a static page is reachable by a browser, not by a
+fetcher. `<img src>`, `curl`, `wget`, and social-card crawlers do not run JavaScript, so they
+receive the empty HTML shell rather than an image. Use `<iframe>` to embed one, and reach for
+`createHandler()` above only when something other than a browser has to pull the bytes.
+
 ## CLI
 
 ```bash
 npx encke --url https://oru.okuso.uk/su --index 11 --output code.svg
+npx encke serve --port 8787 --hosts example.com
 npx encke estimate --url https://oru.okuso.uk/menu
 npx encke check --foreground 777777 --background 888888
 npx encke templates
@@ -214,18 +276,22 @@ Full notes in [`RE_NOTES.md`](./RE_NOTES.md).
 
 Two things remain approximations, and both are measured rather than assumed: the secondary color for **custom** palettes (exact on 82% of sampled pairs, always within one 4-bit step, hue always preserved), and the scannability threshold (97% agreement with the native validator, with all 18 built-ins passing). Built-in templates use Apple's exact values.
 
-## No Apple artwork inside
+## Licensing, and what came from Apple
 
-This package ships **zero Apple trademarks or artwork**: no "App Clip" badge, no Apple logo, no camera glyph. Those are Apple's IP and don't belong in an MIT-licensed package. The ring is the deterministic output of an algorithm applied to your URL — a format, not a logo. Anything decorative in your SVG comes from you.
+**Not affiliated with Apple.** "Apple", "App Clip" and "App Clip Code" are trademarks of Apple Inc.
 
-If you want the official badge on marketing material, generate it with Apple's own tools and place it next to the code.
+This package ships **zero Apple trademarks or artwork**: no "App Clip" badge, no Apple logo, no camera glyph. The ring is the deterministic output of an algorithm applied to your URL — a format, not a logo. Anything decorative in your SVG comes from you. If you want the official badge on marketing material, generate it with Apple's own tools and place it next to the code.
+
+The three files in `data/`, however, are a different matter. They are byte-for-byte extracts of the Huffman frequency models in Apple's `URLCompression.framework`, and they are here because a phone decompresses the URL using exactly those models — a statistically similar table built from scratch decodes to the wrong address, or to nothing. The MIT license covers this repository's source code; it does not cover those three files, and no license to them is granted here.
+
+That is a real and unsettled legal question rather than a solved one. **[NOTICE.md](./NOTICE.md)** sets out what the files are, the interoperability authorities this project relies on, where those authorities are weaker, and how to avoid the question entirely by supplying tables extracted from your own licensed copy of Apple's tool.
 
 ## Development
 
 ```bash
 npm run build       # tsup → dist/ (ESM + CJS + types)
 npm run playground  # live preview at localhost:5199
-npm test            # 132 tests, including the oracle fixtures
+npm test            # 173 tests, including the oracle fixtures
 npm run test:oracle # regenerate the fixtures from the native tool, then test (macOS only)
 npm run test:pack   # pack, install into a clean project, exercise every entry point
 ```
