@@ -1,0 +1,10 @@
+<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- 碼的本質：中心識別圓 + 兩色環弧。縮到 16px 還認得出形狀。 -->
+  <circle cx="16" cy="16" r="5.2" fill="#1d1d1f"/>
+  <g fill="none" stroke-width="2.6" stroke-linecap="round">
+    <path d="M16 3.4 A12.6 12.6 0 0 1 28.6 16" stroke="#1d1d1f"/>
+    <path d="M16 28.6 A12.6 12.6 0 0 1 3.4 16" stroke="#1d1d1f"/>
+    <path d="M28.6 16 A12.6 12.6 0 0 1 16 28.6" stroke="#8e8e93"/>
+    <path d="M3.4 16 A12.6 12.6 0 0 1 16 3.4" stroke="#8e8e93"/>
+  </g>
+</svg>
