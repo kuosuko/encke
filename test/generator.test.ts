@@ -5,6 +5,7 @@ import {
   generateAppClipCodeAsync,
   TEMPLATE_COLORS,
   RING_SLOTS,
+  CENTER_DIAMETER,
 } from "../src/node";
 
 const URL = "https://oru.okuso.uk/su";
@@ -14,7 +15,7 @@ describe("generateAppClipCode", () => {
     const r = generateAppClipCode({ url: URL });
     expect(r.svg).toMatch(/^<\?xml/);
     expect(r.svg).toContain("</svg>");
-    expect(r.svg).not.toMatch(/https?:\/\/[^"]*\.(png|svg|css|js)/); // 沒有外部資源
+    expect(r.svg).not.toMatch(/https?:\/\/[^"]*\.(png|svg|css|js)/); // no external resources
     expect(r.rawBits).toMatch(/^[01]+$/);
     expect(r.payloadHex).toHaveLength(32);
     expect(r.arcCount).toBeGreaterThan(0);
@@ -85,9 +86,42 @@ describe("center", () => {
     expect(r.svg).toContain('<rect id="mine"/>');
     expect(r.svg).toContain("scale(0.5)");
   });
+  it("sizes the identification circle exactly like the native tool", () => {
+    // Measured from native output:
+    //   <g id="Logo" transform="translate(293.275699 293.275699) scale(1.874)">
+    // wrapped around a shape 113.9000015 wide. This size is a scanning spec,
+    // not an aesthetic choice — an earlier value of 210 left the center
+    // 1.64% too small.
+    expect(CENTER_DIAMETER).toBeCloseTo(113.9000015 * 1.874, 3);
+    // and it has to land exactly at the canvas center
+    expect(293.275699 + CENTER_DIAMETER / 2).toBeCloseTo(400, 3);
+  });
+
+  it("clips custom artwork to the identification circle", () => {
+    // Content spilling out of the recognition area covers the code's arcs, killing the code
+    const r = generateAppClipCode({ url: URL, center: '<rect x="-9999" y="-9999" width="19998" height="19998"/>' });
+    const radius = CENTER_DIAMETER / 2;
+    expect(r.svg).toContain(`<circle cx="0" cy="0" r="${radius}"/>`);
+    expect(r.svg).toMatch(/<clipPath id="acc-center-[a-z0-9]+">/);
+    expect(r.svg).toMatch(/clip-path="url\(#acc-center-[a-z0-9]+\)"/);
+  });
+
+  it("gives identical artwork the same clip id, and different artwork a different one", () => {
+    const idOf = (svg: string) => svg.match(/acc-center-([a-z0-9]+)/)![1];
+    const a = generateAppClipCode({ url: URL, center: "<rect/>" }).svg;
+    const b = generateAppClipCode({ url: URL, center: "<rect/>" }).svg;
+    const c = generateAppClipCode({ url: URL, center: "<circle/>" }).svg;
+    expect(idOf(a)).toBe(idOf(b));
+    expect(idOf(a)).not.toBe(idOf(c));
+  });
+
+  it("does not clip the default disc, which is already inside", () => {
+    expect(generateAppClipCode({ url: URL }).svg).not.toContain("clipPath");
+  });
+
   it("accepts the deprecated logo alias", () => {
     expect(generateAppClipCode({ url: URL, logo: "none" }).svg).not.toContain('id="Center"');
-    // center 優先於 logo
+    // center wins over logo
     expect(generateAppClipCode({ url: URL, center: "none", logo: "disc" }).svg).not.toContain('id="Center"');
   });
 });
