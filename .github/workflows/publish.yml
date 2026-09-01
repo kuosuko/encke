@@ -49,6 +49,10 @@ jobs:
           cache: npm
           registry-url: https://registry.npmjs.org
 
+      # OIDC trusted publishing needs npm 11.5.1+; the npm bundled with Node 22
+      # is older. Harmless when publishing with a token instead.
+      - run: npm install -g npm@latest
+
       - run: npm ci
 
       # Fail loudly if the tag and package.json disagree, rather than
@@ -64,6 +68,13 @@ jobs:
           fi
           echo "publishing $PKG"
 
+      # Two paths, and which one runs depends only on whether NPM_TOKEN is set.
+      #
+      # npm cannot configure trusted publishing for a package that does not
+      # exist yet (npm/cli#8544), so the very first release has to go out with
+      # a token. After that, set up Trusted Publishing on the package settings
+      # page, delete the NPM_TOKEN secret, and this same step switches to OIDC
+      # with no token anywhere.
       - name: Publish
         if: ${{ !inputs.dry_run }}
         run: npm publish --provenance --access public
