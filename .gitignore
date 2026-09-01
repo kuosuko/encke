@@ -1,0 +1,8 @@
+node_modules
+dist
+.DS_Store
+*.tgz
+.env
+
+# data/*.data 的機械產物（gzip + base64），npm install 的 prepare 會重建
+src/trie-data.generated.ts

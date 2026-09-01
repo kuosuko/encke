@@ -1,0 +1,118 @@
+{
+  "name": "encke",
+  "version": "0.2.0",
+  "description": "Apple App Clip Code generator in pure TypeScript. Renders the scannable ring code to SVG, bit-for-bit identical to Apple's AppClipCodeGenerator, with no macOS and no native binary. Works in Node, Next.js, React, browsers and Cloudflare Workers.",
+  "keywords": [
+    "app-clip",
+    "appclip",
+    "app-clip-code",
+    "appclipcode",
+    "app-clip-code-generator",
+    "appclipcodegenerator",
+    "apple",
+    "ios",
+    "svg",
+    "generator",
+    "scannable-code",
+    "ring-code",
+    "qrcode-alternative",
+    "nfc",
+    "nextjs",
+    "react",
+    "typescript",
+    "cloudflare-workers",
+    "url-compression",
+    "reed-solomon"
+  ],
+  "homepage": "https://github.com/kuosuko/encke#readme",
+  "bugs": {
+    "url": "https://github.com/kuosuko/encke/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kuosuko/encke.git"
+  },
+  "license": "MIT",
+  "author": "SUKO KUO <suko@sz.ws>",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "node": {
+        "types": "./dist/node.d.ts",
+        "import": "./dist/node.js",
+        "require": "./dist/node.cjs"
+      },
+      "default": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    },
+    "./react": {
+      "node": {
+        "types": "./dist/react.d.ts",
+        "import": "./dist/react-node.js",
+        "require": "./dist/react-node.cjs"
+      },
+      "default": {
+        "types": "./dist/react.d.ts",
+        "default": "./dist/react.js"
+      }
+    },
+    "./tables": {
+      "types": "./dist/tables.d.ts",
+      "default": "./dist/tables.js"
+    },
+    "./data/*": "./data/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.map",
+    "data",
+    "README.md",
+    "LICENSE"
+  ],
+  "bin": {
+    "encke": "./dist/cli.js"
+  },
+  "scripts": {
+    "prepare": "node scripts/build-tables.mjs",
+    "build": "npm run build:tables && tsup && node scripts/post-build.mjs",
+    "build:tables": "node scripts/build-tables.mjs",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build",
+    "test": "vitest run",
+    "test:oracle": "node scripts/gen-oracle.mjs && vitest run",
+    "playground": "vite playground --port 5199 --open",
+    "test:pack": "node scripts/smoke-install.mjs"
+  },
+  "peerDependencies": {
+    "react": ">=17"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.2.5",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "tsup": "^8.3.5",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.6",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
