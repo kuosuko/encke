@@ -6,9 +6,12 @@ export default defineConfig({
     node: "src/node.ts",
     react: "src/react.tsx",
     "react-node": "src/react-node.tsx",
+    handler: "src/handler.ts",
+    "handler-node": "src/handler-node.ts",
     cli: "src/cli.ts",
-    // 內嵌的 Huffman 表 (~1.5 MB)。獨立成一個 entry，這樣主 bundle 不會碰到它 ——
-    // loadTables() 只在真的需要時才 dynamic import。
+    // The embedded Huffman tables (~1.5 MB). Kept as their own entry so the
+    // main bundle never touches them — loadTables() dynamic-imports this only
+    // when it is genuinely needed.
     tables: "src/tables/embedded.ts",
   },
   format: ["esm", "cjs"],
@@ -17,6 +20,7 @@ export default defineConfig({
   splitting: true,
   sourcemap: true,
   treeshake: true,
-  // 自我引用，讓 dynamic import("encke/tables") 原樣輸出、由 exports map 解析
+  // Self-reference: keeps dynamic import("encke/tables") in the output verbatim
+  // so the exports map resolves it at runtime
   external: ["encke"],
 });

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * encke CLI — 旗標刻意與 Apple 原生 AppClipCodeGenerator 對齊，
- * 方便把既有腳本直接換掉。
+ * encke CLI — the flags deliberately mirror Apple's own
+ * AppClipCodeGenerator, so existing scripts can swap one for the other.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { registerNodeTables } from "./tables/node";
@@ -9,6 +9,7 @@ import { generateAppClipCode, type Center, type Layout } from "./generator";
 import { estimatePayloadBits } from "./estimate";
 import { TEMPLATE_COLORS } from "./colors";
 import { checkColors, suggestColors } from "./colorCheck";
+import { createHandler } from "./handler";
 
 registerNodeTables();
 
@@ -16,6 +17,7 @@ const USAGE = `encke — App Clip Code generator (pure TypeScript)
 
 Usage:
   encke --url URL [--output FILE] [options]
+  encke serve [--port N] [--host ADDR] [--hosts a.com,b.com]
   encke templates
   encke estimate --url URL
   encke check --foreground HEX --background HEX
@@ -34,9 +36,19 @@ Options:
       --force               Generate even if the colors will not scan
   -h, --help                Show this help
   -v, --version             Show version
+
+serve options:
+      --port N              Port to listen on      (default 8787)
+      --host ADDR           Address to bind        (default 127.0.0.1)
+      --hosts a.com,b.com   Only encode URLs on these hosts (default: any)
+
+  GET /?url=https://example.com/a&foreground=000000&background=FFFFFF&size=512
 `;
 
 type Flags = Record<string, string | boolean>;
+
+/** serve runs forever, so main returns this to mean "do not exit". */
+const KEEP_ALIVE = -1;
 
 function parseArgs(argv: string[]): { command: string; flags: Flags } {
   const alias: Record<string, string> = {
@@ -56,8 +68,49 @@ function parseArgs(argv: string[]): { command: string; flags: Flags } {
     const next = argv[i + 1];
     if (next && !next.startsWith("-")) { flags[key] = next; i++; } else flags[key] = true;
   }
-  if (rest.length && ["templates", "estimate", "check", "generate"].includes(rest[0])) command = rest[0];
+  if (rest.length && ["templates", "estimate", "check", "generate", "serve"].includes(rest[0])) command = rest[0];
   return { command, flags };
+}
+
+/**
+ * Bridge node:http requests onto the standard Web handler.
+ * The same handler deployed straight to Workers / Next.js behaves
+ * identically.
+ */
+async function serve(flags: Flags): Promise<void> {
+  const { createServer } = await import("node:http");
+  const port = Number(str(flags.port) ?? 8787);
+  const host = str(flags.host) ?? "127.0.0.1";
+  const allowedHosts = str(flags.hosts)?.split(",").map(s => s.trim()).filter(Boolean);
+  const handler = createHandler({ allowedHosts });
+
+  createServer((req, res) => {
+    const headers = new Headers();
+    for (const [key, value] of Object.entries(req.headers)) {
+      if (typeof value === "string") headers.set(key, value);
+      else if (Array.isArray(value)) for (const v of value) headers.append(key, v);
+    }
+    const request = new Request(new URL(req.url ?? "/", `http://${req.headers.host ?? host}`), {
+      method: req.method,
+      headers,
+    });
+    handler(request)
+      .then(async response => {
+        const out: Record<string, string> = {};
+        response.headers.forEach((value, key) => { out[key] = value; });
+        res.writeHead(response.status, out);
+        res.end(response.body ? Buffer.from(await response.arrayBuffer()) : undefined);
+      })
+      .catch((e: Error) => {
+        res.writeHead(500, { "content-type": "text/plain" });
+        res.end(e.message);
+      });
+  }).listen(port, host, () => {
+    process.stderr.write(
+      `encke serving on http://${host}:${port}/?url=https://example.com\n` +
+        (allowedHosts?.length ? `  restricted to: ${allowedHosts.join(", ")}\n` : "")
+    );
+  });
 }
 
 const str = (v: string | boolean | undefined): string | undefined => (typeof v === "string" ? v : undefined);
@@ -77,6 +130,11 @@ function main(argv: string[]): number {
     const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
     process.stdout.write(`${pkg.version}\n`);
     return 0;
+  }
+
+  if (command === "serve") {
+    void serve(flags);
+    return KEEP_ALIVE;
   }
 
   if (command === "templates") {
@@ -139,7 +197,8 @@ function main(argv: string[]): number {
 }
 
 try {
-  process.exit(main(process.argv.slice(2)));
+  const code = main(process.argv.slice(2));
+  if (code !== KEEP_ALIVE) process.exit(code); // serve needs the event loop kept alive
 } catch (e) {
   process.stderr.write(`${(e as Error).message}\n`);
   process.exit(1);

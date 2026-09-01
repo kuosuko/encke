@@ -1,9 +1,11 @@
 /**
- * 打包 → 真的裝進一個乾淨專案 → 每個進入點都跑一次。
+ * Pack -> genuinely install into a clean project -> exercise every entry
+ * point.
  *
- * 單元測試打的是原始碼樹，結構上抓不到打包層的問題：exports map、bin、
- * dist/ 相對於 data/ 的路徑、以及 import("encke/tables") 這個自我引用，
- * 全都只有在真的躺在 node_modules 裡才會被解析。
+ * The unit tests run against the source tree, so they structurally cannot
+ * catch packaging problems: the exports map, bin, dist/'s path relative to
+ * data/, and the self-referencing import("encke/tables") all only resolve
+ * once the package is actually sitting in node_modules.
  *
  *   npm run test:pack
  */
@@ -28,6 +30,12 @@ const check = (name, fn) => {
 };
 
 try {
+  // Build first. A stale or half-finished dist/ packs a tarball with files
+  // missing, every check then blows up, and it reads as broken entry points
+  // when all that happened is an empty shell got packed.
+  console.log("building…");
+  run("npm", ["run", "build"], { cwd: repo });
+
   console.log("packing…");
   run("npm", ["pack", "--pack-destination", work, "--silent"], { cwd: repo });
   const tarball = join(work, readdirSync(work).find(f => f.endsWith(".tgz")));
@@ -72,6 +80,24 @@ try {
       const img = renderToStaticMarkup(React.createElement(AppClipCodeImg, { url: "https://a.co/p" }));
       if (!img.includes("data:image/svg+xml")) throw new Error("no data URL");
       console.log("svg + data URL ok");
+    `));
+
+  check("./handler — HTTP endpoint", () =>
+    script("f.mjs", `
+      import { createHandler } from "encke/handler";
+      const handler = createHandler({ allowedHosts: ["oru.okuso.uk"] });
+
+      const ok = await handler(new Request("https://x/?url=https%3A%2F%2Foru.okuso.uk%2Fsu&index=11&size=256"));
+      if (ok.status !== 200) throw new Error("status " + ok.status + " — the handler subpath never registered the Node tables");
+      const svg = await ok.text();
+      if (!svg.includes("#88DDCC")) throw new Error("no tint");
+      if (!svg.includes('width="256"')) throw new Error("size dropped");
+      if (!ok.headers.get("etag")) throw new Error("no etag");
+
+      const blocked = await handler(new Request("https://x/?url=https%3A%2F%2Fevil.com%2Fa"));
+      if (blocked.status !== 400) throw new Error("allowedHosts let evil.com through");
+
+      console.log("svg + etag + host allowlist ok");
     `));
 
   check("./tables subpath", () =>
