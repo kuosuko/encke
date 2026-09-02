@@ -1,6 +1,6 @@
 {
   "name": "@sz.ws/encke",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Apple App Clip Code generator in pure TypeScript. Renders the scannable ring code to SVG, bit-for-bit identical to Apple's AppClipCodeGenerator, with no macOS and no native binary. Works in Node, Next.js, React, browsers and Cloudflare Workers.",
   "keywords": [
     "app-clip",
@@ -40,6 +40,9 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "workerd": "./dist/index.js",
+      "worker": "./dist/index.js",
+      "edge-light": "./dist/index.js",
       "node": {
         "types": "./dist/node.d.ts",
         "import": "./dist/node.js",
@@ -51,6 +54,9 @@
       }
     },
     "./react": {
+      "workerd": "./dist/react.js",
+      "worker": "./dist/react.js",
+      "edge-light": "./dist/react.js",
       "node": {
         "types": "./dist/react.d.ts",
         "import": "./dist/react-node.js",
@@ -62,6 +68,9 @@
       }
     },
     "./handler": {
+      "workerd": "./dist/handler.js",
+      "worker": "./dist/handler.js",
+      "edge-light": "./dist/handler.js",
       "node": {
         "types": "./dist/handler.d.ts",
         "import": "./dist/handler-node.js",

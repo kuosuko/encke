@@ -158,8 +158,8 @@ export function generateDataURL(opts: GenerateOptions): string {
 
 /**
  * Convenience wrapper for browsers / Workers: make sure the Huffman tables
- * are loaded, then generate. Under Node loadTables() is a no-op, so the two
- * behave the same.
+ * are loaded, then generate. Under Node loadTables() just reads the package's
+ * data/ directory, so the two behave the same.
  */
 export async function generateAppClipCodeAsync(
   opts: GenerateOptions & { tables?: LoadTablesOptions }

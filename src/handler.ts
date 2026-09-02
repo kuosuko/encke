@@ -19,7 +19,6 @@
  */
 import { generateAppClipCode, type GenerateOptions, type Layout } from "./generator";
 import { loadTables, type LoadTablesOptions } from "./tables/load";
-import { hasTrieTables } from "./tables/registry";
 import { TEMPLATE_COLORS, normalizeHex } from "./colors";
 
 export interface HandlerOptions {
@@ -260,8 +259,10 @@ export function createHandler(options: HandlerOptions = {}): FetchHandler {
     try {
       const { generate, size, download } = optionsFromParams(params, options);
 
-      // Node registered a sync provider long before this point; this is for Workers / Deno.
-      if (!hasTrieTables()) await loadTables(options.tables);
+      // Idempotent, and free once the tables are in hand. Under Node this
+      // reads the package's data/ directory on the first request; a Worker
+      // gets whatever options.tables names.
+      await loadTables(options.tables);
 
       const result = generateAppClipCode(generate);
       const body = size ? withSize(result.svg, size) : result.svg;

@@ -119,6 +119,20 @@ try {
       console.log("embedded tables match the filesystem tables");
     `));
 
+  // Bundlers pick the export condition by target platform: without a
+  // worker-shaped condition, Wrangler/webpack/esbuild resolve "node" for a
+  // Worker build and drag dist/node.js — and node:fs — in with it.
+  check("Workers condition (workerd)", () => {
+    writeFileSync(join(app, "g.mjs"), `
+      import { hasTrieTables, loadTables, compressBits } from "@sz.ws/encke";
+      if (hasTrieTables()) throw new Error("the Node build resolved for a Worker");
+      await loadTables();
+      if (compressBits("https://oru.okuso.uk/su").length !== 65) throw new Error("bits");
+      console.log("resolves to the universal build; loadTables() loads");
+    `);
+    return run("node", ["--conditions=workerd", "g.mjs"], { cwd: app }).trim();
+  });
+
   check("CLI bin", () => {
     const bin = join(app, "node_modules", ".bin", "encke");
     const templates = run(bin, ["templates"]);

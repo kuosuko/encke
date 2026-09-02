@@ -144,6 +144,11 @@ generateAppClipCode({ url });                        // synchronous from here on
 
 `generateAppClipCodeAsync()` does both in one call. The tables are never part of your main bundle: importing `@sz.ws/encke` costs about 31 KB.
 
+Workers resolve the `workerd` / `worker` / `edge-light` export conditions, so the Node build and its
+`node:fs` import never enter the bundle. If your bundler picks the Node build anyway, nothing breaks:
+the disk loader only registers itself where there is a real filesystem, and `loadTables()` always
+honours the source you name.
+
 ## HTTP endpoint
 
 `@sz.ws/encke/handler` turns a query string into an SVG. It takes a standard `Request` and returns a

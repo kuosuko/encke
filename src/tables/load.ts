@@ -1,11 +1,11 @@
 /**
  * Loading the Huffman tables.
  *
- * Node never reaches this file — under Node, `encke` resolves to
- * dist/node.js, which registers a synchronous fs provider at startup. This
- * is for browsers / Workers / Deno.
+ * Mostly for browsers / Workers / Deno: under Node, `encke` resolves to
+ * dist/node.js, which registers a synchronous fs provider at startup, and
+ * loadTables() only has to run it.
  */
-import { hasTrieTables, setTrieTables, type TrieTables } from "./registry";
+import { loadFromSyncProvider, setTrieTables, trieTablesLoaded, type TrieTables } from "./registry";
 
 export interface LoadTablesOptions {
   /**
@@ -43,16 +43,25 @@ async function fetchTables(baseUrl: string, f: typeof globalThis.fetch): Promise
  * ```
  */
 export function loadTables(opts: LoadTablesOptions = {}): Promise<void> {
-  if (hasTrieTables()) return Promise.resolve();
+  // trieTablesLoaded(), not hasTrieTables(): a registered sync provider must
+  // not short-circuit this. Bundlers resolve the "node" export condition even
+  // for Worker builds, so dist/node.js — and its fs provider — can end up in a
+  // bundle with no filesystem behind it. Returning early there would skip the
+  // fetch and leave the failure for the first encode.
+  if (trieTablesLoaded()) return Promise.resolve();
   if (inflight) return inflight;
 
   const run = async (): Promise<void> => {
+    // A source named by the caller always wins over whatever is registered.
     if (opts.tables) return setTrieTables(opts.tables);
     if (opts.baseUrl) {
       const f = opts.fetch ?? globalThis.fetch;
       if (typeof f !== "function") throw new Error("encke: no fetch available; pass options.fetch");
       return setTrieTables(await fetchTables(opts.baseUrl, f));
     }
+    // Nothing named: Node's disk provider is free and already there. If it
+    // cannot deliver, fall through to the embedded copy rather than throwing.
+    if (loadFromSyncProvider()) return;
     const { decodeEmbeddedTables } = await import("@sz.ws/encke/tables");
     setTrieTables(await decodeEmbeddedTables());
   };

@@ -35,6 +35,31 @@ export function hasTrieTables(): boolean {
   return tables !== null || provider !== null;
 }
 
+/**
+ * Tables actually in hand. A registered provider does not count: it is only a
+ * promise that someone can produce them, and that promise is not always good
+ * (see registerNodeTables()).
+ */
+export function trieTablesLoaded(): boolean {
+  return tables !== null;
+}
+
+/**
+ * Materialize the tables through the registered sync provider. Returns false
+ * when there is no provider, or when it throws — a provider that cannot
+ * deliver is dropped so the caller can fall back to another source.
+ */
+export function loadFromSyncProvider(): boolean {
+  if (!provider) return false;
+  try {
+    tables = provider();
+    return true;
+  } catch {
+    provider = null;
+    return false;
+  }
+}
+
 export class TablesNotLoadedError extends Error {
   constructor() {
     super(
